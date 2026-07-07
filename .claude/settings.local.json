@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__f326a3bc-d687-433d-9621-9764640fa542__list_tables_for_base",
+      "mcp__f326a3bc-d687-433d-9621-9764640fa542__get_table_schema",
+      "Bash(npm install *)",
+      "Bash(npm -v)",
+      "Read(//Users/jungus/**)",
+      "Read(//usr/local/bin/**)",
+      "Bash(sw_vers -productVersion)",
+      "Bash(echo \"macOS: $\\(sw_vers -productVersion 2>/dev/null\\)\")",
+      "Bash(sudo -n true)",
+      "Bash(xcode-select -p)",
+      "Read(//opt/**)",
+      "Bash(/opt/homebrew/bin/brew --version)",
+      "Bash(/opt/homebrew/bin/node -v)",
+      "Bash(/opt/homebrew/bin/npm -v)",
+      "Bash(/opt/homebrew/bin/brew install *)",
+      "Bash(echo \"node: $\\(/opt/homebrew/bin/node -v\\)\")",
+      "Bash(echo \"npm: $\\(/opt/homebrew/bin/npm -v\\)\")",
+      "Bash(/opt/homebrew/bin/npm install *)",
+      "Bash(awk ' *)",
+      "Bash(mv .env.tmp .env)",
+      "Bash(chmod 600 .env)",
+      "Bash(mkdir -p public netlify/edge-functions)",
+      "Bash(mv index.html public/index.html)",
+      "mcp__f326a3bc-d687-433d-9621-9764640fa542__update_records_for_table",
+      "mcp__claude-in-chrome__tabs_context_mcp",
+      "mcp__claude-in-chrome__navigate",
+      "mcp__claude-in-chrome__computer",
+      "mcp__claude-in-chrome__read_console_messages"
+    ]
+  }
+}

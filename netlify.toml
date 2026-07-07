@@ -1,0 +1,19 @@
+# Netlify configuration for the Pipeline Command Center (Slice 1 — read-only).
+
+[build]
+  # Only the public/ folder is deployed as the website. .env stays at the repo
+  # root and is NEVER uploaded. Serverless + edge functions live under netlify/.
+  publish = "public"
+  functions = "netlify/functions"
+  edge_functions = "netlify/edge-functions"
+
+[dev]
+  publish = "public"
+  framework = "#static"
+
+# Password gate: this edge function runs on EVERY request (path "/*") — including
+# the /.netlify/functions/jobs data endpoint — and returns 401 unless the correct
+# Basic Auth credentials are supplied. Credentials come from env vars, never code.
+[[edge_functions]]
+  path = "/*"
+  function = "auth"

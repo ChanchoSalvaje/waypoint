@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Waypoint Command Center</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<style>
+  :root{
+    --paper:#F3EEE4; --surface:#FCFAF6; --ink:#25283D; --muted:#6B6459; --faint:#9A958C;
+    --line:#E3DCCF; --steel:#2F4A3A; --steel-2:#6F8796; --voltage:#B85C38; --voltage-soft:#F5E9E1;
+    --live:#2F4A3A; --flag:#B23B3B; --flag-soft:#F6E3DD; --r:14px;
+    --saved:#6F8796; --tailoring:#B85C38; --ready:#A66A4C; --applied:#25283D; --screening:#2F4A3A; --interviewing:#8B4F55; --offer:#C7A45A; --closed:#9A958C;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:radial-gradient(1200px 500px at 80% -10%, rgba(47,74,58,.06), transparent 60%), var(--paper);
+    color:var(--ink); font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5; min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:36px 28px 80px}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .eyebrow{font-family:ui-monospace,monospace;font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--voltage);font-weight:600}
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .brand-mark{flex:0 0 auto;display:block}
+  .brand-text{display:flex;flex-direction:column;line-height:1}
+  .wordmark{font-size:26px;font-weight:500;letter-spacing:-.01em;line-height:1.05;color:#25283D}
+  .brand-eyebrow{font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#6F8796;font-weight:600;margin-top:3px}
+  h1{font-size:clamp(26px,4vw,38px);line-height:1.05;letter-spacing:-.02em;font-weight:700;margin:10px 0 4px}
+  .sub{color:var(--muted);font-size:15px}
+  .sub b{color:var(--ink)}
+  .rule{height:2px;background:linear-gradient(90deg,var(--voltage) 0 64px,var(--line) 64px);margin:22px 0 26px;border-radius:2px}
+  .hidden{display:none!important}
+
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+  .tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:15px 16px}
+  .tile .k{font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+  .tile .v{font-size:26px;font-weight:700;letter-spacing:-.01em}
+
+  .sec-eyebrow{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint);margin:26px 0 10px;display:flex;gap:9px;align-items:center}
+  .sec-eyebrow .num{color:var(--voltage);font-weight:600}
+
+  .today{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:8px}
+  .na{display:flex;gap:14px;align-items:center;padding:14px 16px;border-radius:11px;cursor:pointer;transition:background .12s;border-bottom:1px solid var(--line)}
+  .na:last-child{border-bottom:none}
+  .na:hover{background:#F6F1E7}
+  .na .when{font-family:ui-monospace,monospace;font-size:12px;font-weight:600;flex:0 0 auto;width:82px;text-align:center;padding:6px 4px;border-radius:8px}
+  .na .when.over{background:var(--flag-soft);color:var(--flag)}
+  .na .when.soon{background:var(--voltage-soft);color:var(--voltage)}
+  .na .when.later{background:#EDE7DA;color:var(--muted)}
+  .na .body{flex:1;min-width:0}
+  .na .co{font-weight:650;font-size:14.5px}
+  .na .act{font-size:13.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .na .chev{color:var(--faint);flex:0 0 auto}
+
+  .toolbar{display:flex;align-items:center;justify-content:space-between;margin:26px 0 10px;gap:12px;flex-wrap:wrap}
+  .toolbar .sec-eyebrow{margin:0}
+  .toggle{font-size:13px;color:var(--steel-2);cursor:pointer;font-weight:600;background:none;border:1px solid var(--line);border-radius:9px;padding:7px 12px}
+  .toggle.on{background:var(--steel);color:#fff;border-color:var(--steel)}
+  .list{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+  .row{display:grid;grid-template-columns:auto 1.6fr 1fr auto;gap:14px;align-items:center;padding:15px 18px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .12s}
+  .row:last-child{border-bottom:none}
+  .row:hover{background:#F6F1E7}
+  .row .co{font-weight:650;font-size:15px}
+  .row .role{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .meta{font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+  .row .right{display:flex;align-items:center;gap:12px}
+  .badge{font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;padding:4px 9px;border-radius:999px;color:#FBF7F0;white-space:nowrap}
+  .fit{font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--steel-2);white-space:nowrap}
+  .fit .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--voltage);margin-right:3px}
+  /* Company-initial monogram avatar (display-only) */
+  .mono-badge{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;color:#F3EEE4;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;font-size:14px;line-height:1;letter-spacing:0;user-select:none}
+  .posting-btn{display:inline-flex;align-items:center;gap:6px;margin-top:16px;background:var(--voltage);color:#FBF7F0;font-weight:650;font-size:14px;text-decoration:none;padding:10px 16px;border-radius:10px}
+  .posting-btn:hover{background:#A34E2E}
+  .ext-link{display:inline-flex;align-items:center;justify-content:center;color:var(--voltage);flex:0 0 auto;padding:3px;border-radius:6px;text-decoration:none}
+  .ext-link:hover{background:var(--voltage-soft)}
+  .ext-ico{display:block}
+
+  .back{display:inline-flex;align-items:center;gap:7px;background:none;border:none;color:var(--steel-2);font:inherit;font-weight:600;font-size:14px;cursor:pointer;padding:6px 0;margin-bottom:4px}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .chip{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:9px 13px}
+  .chip .k{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:3px}
+  .chip .v{font-size:13.5px;font-weight:600}
+  section.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:24px 26px;margin-bottom:18px}
+  h2{font-size:19px;letter-spacing:-.01em;font-weight:700;margin:0 0 14px}
+  p.body{color:#25283D;font-size:15px;margin:0 0 12px;white-space:pre-wrap}
+  .empty{color:var(--faint);font-size:14px;font-style:italic;padding:6px 0}
+  .callout{border-left:3px solid var(--steel-2);background:#F6F1E7;border-radius:0 11px 11px 0;padding:12px 15px;margin:10px 0;font-size:14px;color:#25283D;white-space:pre-wrap}
+  .readonly-note{font-family:ui-monospace,monospace;font-size:11px;color:var(--faint);margin-top:8px}
+
+  .edit-card label.fld{display:block;font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:0 0 6px}
+  .edit-card select,.edit-card textarea{width:100%;font:inherit;font-size:14.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:16px}
+  .edit-card textarea{resize:vertical;min-height:52px;line-height:1.4}
+  .edit-card select:focus,.edit-card textarea:focus{outline:2px solid var(--voltage);outline-offset:1px;border-color:var(--voltage)}
+  .edit-actions{display:flex;align-items:center;gap:14px}
+  .save-btn{font:inherit;font-size:14px;font-weight:650;color:#fff;background:var(--steel);border:1px solid var(--steel);border-radius:10px;padding:9px 18px;cursor:pointer}
+  .save-btn:hover{background:var(--steel-2)}
+  .save-btn:disabled{opacity:.55;cursor:default}
+  .edit-status{font-size:13px;color:var(--muted)}
+  .edit-status.ok{color:var(--live);font-weight:600}
+  .edit-status.err{color:var(--flag);font-weight:600}
+  .edit-divider{height:1px;background:var(--line);margin:20px 0}
+
+  /* ----- Detail view (rebuilt) ----- */
+  .detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:8px}
+  .detail-head-text{min-width:0}
+  .detail-head h1{margin-top:6px}
+  .detail-head .posting-btn{margin-top:6px;flex:0 0 auto}
+
+  .glance{display:flex;flex-wrap:wrap;gap:14px 26px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 20px;margin-bottom:18px}
+  .glance-item{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .glance-k{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);font-weight:600;display:flex;align-items:center}
+  .glance-v{font-size:14px;font-weight:600;color:var(--ink);display:flex;align-items:center;min-height:24px}
+
+  .help{position:relative;display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--steel-2);color:var(--steel-2);font-size:10px;font-weight:700;cursor:help;background:none;margin-left:5px;line-height:1;padding:0;font-family:ui-monospace,monospace}
+  .help .help-pop{display:none;position:absolute;left:-6px;top:150%;z-index:30;width:250px;background:var(--ink);color:#F3EEE4;font-family:ui-sans-serif,system-ui,sans-serif;font-weight:400;font-size:12px;line-height:1.5;letter-spacing:0;text-transform:none;padding:10px 12px;border-radius:9px;box-shadow:0 8px 24px rgba(37,40,61,.28)}
+  .help:hover .help-pop,.help:focus .help-pop{display:block}
+  .help-pop b{color:#FCFAF6;font-weight:600}
+
+  .pips{display:inline-flex;gap:4px;vertical-align:middle}
+  .pip{font:inherit;font-size:12px;font-weight:700;width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer;line-height:1;padding:0}
+  .pip.on{background:var(--voltage);border-color:var(--voltage);color:#FBF7F0}
+  .pip:hover{border-color:var(--voltage)}
+  .pip:disabled{opacity:.5;cursor:default}
+
+  .nextstep{background:var(--voltage-soft);border:1px solid #EBD6C7;border-radius:var(--r);padding:16px 18px;margin-bottom:18px}
+  .nextstep-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+  .nextstep-eyebrow{font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--voltage);font-weight:700}
+  .nextstep-body{font-size:15px;color:var(--ink);white-space:pre-wrap}
+  .nextstep-body.is-default{color:var(--muted);font-style:italic}
+  .nextstep-tag{display:block;margin-top:6px;font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.06em;color:var(--faint);font-style:normal}
+  .nextstep textarea{width:100%;font:inherit;font-size:14.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:4px 0 12px;resize:vertical;min-height:52px;line-height:1.4}
+  .nextstep textarea:focus{outline:2px solid var(--voltage);outline-offset:1px;border-color:var(--voltage)}
+  .link-btn{background:none;border:none;color:var(--steel-2);font:inherit;font-weight:600;font-size:13px;cursor:pointer;padding:2px 4px}
+  .link-btn:hover{color:var(--voltage);text-decoration:underline}
+
+  .prep-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:18px}
+  .prep-row{border-bottom:1px solid var(--line)}
+  .prep-row:last-child{border-bottom:none}
+  .prep-row summary{cursor:pointer;padding:14px 18px;font-weight:650;font-size:15px;display:flex;align-items:center;gap:10px;list-style:none}
+  .prep-row summary::-webkit-details-marker{display:none}
+  .prep-row summary:hover{background:#F6F1E7}
+  .prep-row summary .t{flex:1;min-width:0}
+  .prep-row summary::after{content:"\25B8";color:var(--faint);font-size:12px}
+  .prep-row[open] summary::after{content:"\25BE"}
+  .prep-hint{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:600}
+  .prep-content{padding:0 18px 16px}
+  .prep-content p.body{margin:0}
+
+  footer{margin-top:28px;text-align:center;color:var(--faint);font-size:12px}
+
+  /* ---- Header nav + Comp view (client-side only) ---- */
+  .topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .topnav{flex:0 0 auto;padding-top:4px}
+  .navlink{display:inline-flex;align-items:center;gap:6px;background:none;border:1px solid var(--voltage);border-radius:10px;padding:8px 14px;font:inherit;font-size:13px;font-weight:650;color:var(--voltage);cursor:pointer}
+  .navlink:hover{background:var(--voltage-soft)}
+  .comp-grid{display:grid;grid-template-columns:1fr auto;gap:10px 16px;align-items:center;max-width:460px;margin-bottom:4px}
+  .comp-grid label{font-size:14px;color:var(--ink)}
+  .comp-grid input{width:150px;font:inherit;font-size:14.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 11px;text-align:right}
+  .comp-grid input:focus{outline:2px solid var(--voltage);outline-offset:1px;border-color:var(--voltage)}
+  .comp-result{display:flex;flex-wrap:wrap;gap:14px;margin:18px 0 12px}
+  .comp-figure{flex:1 1 180px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:15px 16px}
+  .comp-figure .k{font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+  .comp-figure .v{font-size:26px;font-weight:700;letter-spacing:-.01em}
+  .comp-banner{background:#F5E9E1;border:1px solid #EBD6C7;border-radius:12px;padding:14px 16px;font-size:14.5px;color:var(--ink)}
+  .comp-banner .lead{font-weight:650}
+  .comp-note{font-size:13px;color:var(--muted)}
+  .comp-sub{font-size:13px;color:var(--muted);margin-top:8px}
+  .comp-rate{background:#EAF0EC;border:1px solid #D3E0D6;border-radius:12px;padding:16px 18px;margin-top:16px;color:#2F4A3A}
+  .comp-rate .k{font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#4B5F52;margin-bottom:6px}
+  .comp-rate .v{font-size:30px;font-weight:700;letter-spacing:-.01em}
+  .comp-rate .naive{font-size:13.5px;color:#4B5F52;margin-top:8px}
+  .comp-caveat{font-size:12px;color:var(--faint);font-style:italic;margin-top:6px}
+
+  @media (max-width:760px){
+    .tiles{grid-template-columns:1fr 1fr}
+    .row{grid-template-columns:auto 1fr auto}
+    .row .meta{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  :focus-visible{outline:2px solid var(--voltage);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===================== DASHBOARD VIEW ===================== -->
+  <div id="view-dashboard">
+    <div class="topbar">
+      <div class="brand"><svg class="brand-mark" viewBox="0 0 100 100" width="30" height="30" aria-hidden="true"><path d="M50 16 L57.8 42.2 L84 50 L57.8 57.8 L50 84 L42.2 57.8 L16 50 L42.2 42.2 Z" fill="#B85C38"/><circle cx="50" cy="50" r="3.5" fill="#F3EEE4"/></svg><div class="brand-text"><span class="wordmark">Waypoint</span><span class="brand-eyebrow">Command Center</span></div></div>
+      <nav class="topnav"><button type="button" class="navlink" onclick="showComp()">Comp <span aria-hidden="true">&rsaquo;</span></button></nav>
+    </div>
+    <h1>Here is the way, Tim.</h1>
+    <div class="sub" id="dash-sub">Loading your pipeline&hellip;</div>
+    <div class="rule"></div>
+
+    <div class="tiles" id="tiles"></div>
+
+    <div class="sec-eyebrow"><span class="num">&#9670;</span> Today &mdash; next actions</div>
+    <div class="today" id="today"></div>
+
+    <div class="toolbar">
+      <div class="sec-eyebrow"><span class="num">&#9636;</span> Opportunities</div>
+      <button class="toggle" id="closedToggle">Show closed</button>
+    </div>
+    <div class="list" id="list"></div>
+
+    <footer>Reading live from your Airtable base &mdash; read-only.</footer>
+  </div>
+
+  <!-- ===================== DETAIL VIEW ===================== -->
+  <div id="view-detail" class="hidden"></div>
+
+  <!-- ===================== COMP VIEW (client-side math only) ===================== -->
+  <div id="view-comp" class="hidden">
+    <button class="back" onclick="compBack()">&lsaquo; Back to pipeline</button>
+    <h1>Comp check</h1>
+    <div class="sub">Quick client-side math &mdash; nothing here reads or writes your pipeline.</div>
+    <div class="rule"></div>
+
+    <section class="card">
+      <h2>W-2 comp check</h2>
+      <div class="comp-grid">
+        <label for="w2_base">Base salary</label><input id="w2_base" type="number" inputmode="decimal" value="150000" oninput="computeW2()">
+        <label for="w2_bonus">Target bonus</label><input id="w2_bonus" type="number" inputmode="decimal" value="20000" oninput="computeW2()">
+        <label for="w2_equity">Equity / RSU (annual)</label><input id="w2_equity" type="number" inputmode="decimal" value="0" oninput="computeW2()">
+        <label for="w2_benefits">Benefits (401k + health)</label><input id="w2_benefits" type="number" inputmode="decimal" value="26000" oninput="computeW2()">
+        <label for="w2_floor">Cash floor</label><input id="w2_floor" type="number" inputmode="decimal" value="195000" oninput="computeW2()">
+      </div>
+      <div class="comp-result">
+        <div class="comp-figure"><div class="k">Cash comp</div><div class="v" id="w2_cash">&mdash;</div></div>
+        <div class="comp-figure"><div class="k">Total comp</div><div class="v" id="w2_total">&mdash;</div></div>
+      </div>
+      <div class="comp-banner" id="w2_banner"></div>
+      <div class="comp-sub">The floor is a reference, not a hard gate &mdash; a role's other draws can be worth closing a gap.</div>
+    </section>
+
+    <section class="card">
+      <h2>1099 corp-to-corp rate</h2>
+      <div class="comp-grid">
+        <label for="c_target">Target annual comp</label><input id="c_target" type="number" inputmode="decimal" value="195000" oninput="compute1099()">
+        <label for="c_hours">Billable hours / yr</label><input id="c_hours" type="number" inputmode="decimal" value="1800" oninput="compute1099()">
+        <label for="c_benefits">Self-funded benefits</label><input id="c_benefits" type="number" inputmode="decimal" value="24000" oninput="compute1099()">
+        <label for="c_overhead">Overhead %</label><input id="c_overhead" type="number" inputmode="decimal" value="10" oninput="compute1099()">
+        <label for="c_tax">Employer-side tax %</label><input id="c_tax" type="number" inputmode="decimal" value="7.65" oninput="compute1099()">
+      </div>
+      <div class="comp-rate">
+        <div class="k">Required corp-to-corp rate</div>
+        <div class="v" id="c_rate">&mdash;</div>
+        <div class="naive" id="c_naive">&mdash;</div>
+      </div>
+    </section>
+
+    <div class="comp-caveat">Estimates for planning &mdash; not tax or financial advice. Confirm specifics with a professional.</div>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   DATA SOURCE  —  Live Airtable data via the serverless function
+   at /.netlify/functions/jobs. We fetch once on load, store the
+   result in JOBS, then render from it. Everything below renders
+   from whatever getJobs() returns, so this stays the only place
+   the data source is defined. Strictly read-only.
+   ============================================================ */
+var JOBS = [];
+function getJobs(){ return JOBS; }
+
+async function loadJobs(){
+  try{
+    var resp = await fetch("/.netlify/functions/jobs");
+    var data = await resp.json();
+    if(!resp.ok || (data && data.error)){
+      showLoadError((data && data.error) || ("Request failed ("+resp.status+")"));
+      return;
+    }
+    JOBS = (data && data.jobs) || [];
+    renderDashboard();
+  }catch(err){
+    showLoadError("Couldn't reach the jobs function. Is `netlify dev` running? ("+err+")");
+  }
+}
+
+function showLoadError(msg){
+  document.getElementById("tiles").innerHTML="";
+  document.getElementById("dash-sub").textContent="Couldn't load your pipeline.";
+  document.getElementById("today").innerHTML='<div style="padding:16px" class="empty">'+esc(msg)+'</div>';
+  document.getElementById("list").innerHTML="";
+}
+
+var STAGE_ORDER = ["Saved","Tailoring","Ready to apply","Applied","Screening","Interviewing","Offer","Closed"];
+var STAGE_COLOR = {Saved:"var(--saved)",Tailoring:"var(--tailoring)","Ready to apply":"var(--ready)",Applied:"var(--applied)",Screening:"var(--screening)",Interviewing:"var(--interviewing)",Offer:"var(--offer)",Closed:"var(--closed)"};
+var STAGE_TEXT = {Offer:"#25283D",Closed:"#25283D"};   /* light text except Offer & Closed (dark for legibility) */
+function esc(s){ return (s||"").replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];}); }
+function isClosed(j){ return j.stage==="Closed"; }
+function hasPrep(j){ return j.prep && (j.prep.background||j.prep.edge||j.prep.questions||j.prep.likely); }
+function daysUntil(d){ if(!d) return null; var ms=new Date(d+"T00:00:00")-new Date(new Date().toDateString()); return Math.round(ms/86400000); }
+function whenLabel(d){
+  var n=daysUntil(d);
+  if(n===null) return {t:"—",cls:"later"};
+  if(n<0) return {t:Math.abs(n)+"d late",cls:"over"};
+  if(n===0) return {t:"Today",cls:"soon"};
+  if(n<=3) return {t:"In "+n+"d",cls:"soon"};
+  return {t:new Date(d+"T00:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric"}),cls:"later"};
+}
+
+function renderDashboard(){
+  var jobs=getJobs();
+  var active=jobs.filter(function(j){return !isClosed(j);});
+  var showClosed=document.getElementById("closedToggle").classList.contains("on");
+
+  document.getElementById("dash-sub").textContent=active.length+" active opportunities · "+jobs.filter(isClosed).length+" closed";
+
+  var counts={};
+  STAGE_ORDER.forEach(function(s){counts[s]=jobs.filter(function(j){return j.stage===s;}).length;});
+  var inProcess=active.filter(function(j){return ["Applied","Screening","Interviewing","Offer"].indexOf(j.stage)>=0;}).length;
+  var needPrep=active.filter(function(j){return !hasPrep(j);}).length;
+  document.getElementById("tiles").innerHTML=
+    tile("Active",active.length)+tile("In process",inProcess)+
+    tile("Interviewing",counts["Interviewing"]+counts["Screening"])+tile("Need prep",needPrep);
+
+  var na=active.filter(function(j){return j.nextAction;})
+    .sort(function(a,b){return (a.nextActionDate||"9999").localeCompare(b.nextActionDate||"9999");});
+  document.getElementById("today").innerHTML = na.length ? na.map(function(j){
+    return '<div class="na" onclick="openDetail(\''+j.id+'\')">'+
+      monogram(j.company)+
+      '<div class="body"><div class="co">'+esc(j.company)+'</div><div class="act">'+esc(j.nextAction)+'</div></div>'+
+      linkIcon(j)+
+      '<div class="chev">&rsaquo;</div></div>';
+  }).join("") : '<div style="padding:16px" class="empty">No next actions set yet.</div>';
+
+  var rows=(showClosed?jobs:active).slice().sort(function(a,b){
+    var d=STAGE_ORDER.indexOf(a.stage)-STAGE_ORDER.indexOf(b.stage);
+    return d!==0?d:(b.fit||0)-(a.fit||0);
+  });
+  document.getElementById("list").innerHTML=rows.map(function(j){
+    return '<div class="row" onclick="openDetail(\''+j.id+'\')">'+
+      monogram(j.company)+
+      '<div><div class="co">'+esc(j.company)+'</div><div class="role">'+esc(j.role)+'</div></div>'+
+      '<div class="meta"><span>'+esc(j.comp||"—")+'</span><span>'+esc(j.workMode||"")+'</span></div>'+
+      '<div class="right">'+
+        (j.fit?'<span class="fit"><span class="dot"></span>'+j.fit+'/5</span>':'')+
+        '<span class="badge" style="background:'+(STAGE_COLOR[j.stage]||"var(--muted)")+';color:'+(STAGE_TEXT[j.stage]||"#FBF7F0")+'">'+esc(j.stage)+'</span>'+
+        linkIcon(j)+
+      '</div></div>';
+  }).join("");
+}
+function tile(k,v){ return '<div class="tile"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>'; }
+
+/* ---- Display-only: company-initial monogram avatar ----
+   Same company always maps to the same palette tint (stable hash),
+   so the badge colour is consistent across Today and Opportunities. */
+var MONO_TINTS=["#2F4A3A","#6F8796","#8B4F55","#A66A4C"];
+function monoTint(name){
+  var s=name||"",h=0;
+  for(var i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))>>>0; }
+  return MONO_TINTS[h%MONO_TINTS.length];
+}
+function monogram(name){
+  var s=(name||"").trim();
+  var ch=s?esc(s.charAt(0).toUpperCase()):"·";
+  return '<span class="mono-badge" style="background:'+monoTint(s)+'" aria-hidden="true">'+ch+'</span>';
+}
+
+/* ---- Display-only: link to the Airtable posting URL (no writes) ---- */
+var EXT_ICON = '<svg class="ext-ico" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg>';
+function safeUrl(u){
+  u=(u||"").trim();
+  if(!u) return "";
+  if(/^https?:\/\//i.test(u)) return u;                 // http(s) → use as-is
+  if(/^[a-z][a-z0-9+.\-]*:/i.test(u)) return "";        // other scheme (javascript:, data:, mailto:…) → reject
+  return "https://"+u;                                   // schemeless → assume https
+}
+function linkIcon(j){
+  var u=safeUrl(j.link); if(!u) return "";
+  return '<a class="ext-link" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" title="Open posting" aria-label="Open posting" onclick="event.stopPropagation()">'+EXT_ICON+'</a>';
+}
+function linkButton(j){
+  var u=safeUrl(j.link); if(!u) return "";
+  return '<a class="posting-btn" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">Open application <span aria-hidden="true">&rarr;</span></a>';
+}
+
+var FIT_HELP='<b>Fit — tool-assessed</b><br>5 Bullseye · 4 Strong · 3 Plausible · 2 Weak · 1 Poor';
+var EXC_HELP='<b>Excitement — self-rated</b><br>5 Thrilled · 4 Energized · 3 Interested · 2 Lukewarm · 1 Flat';
+var NEXT_DEFAULTS={
+  "Saved":"Verify fit (comp, remote, lane); decide whether to pursue.",
+  "Tailoring":"Finish the tailored resume + cover, then apply.",
+  "Ready to apply":"Apply to the posting.",
+  "Applied":"Await a response; follow up in ~7 days if quiet.",
+  "Screening":"Prep for the next round; confirm logistics.",
+  "Interviewing":"Send a thank-you; prep the next interview.",
+  "Offer":"Evaluate the offer; negotiate; decide."
+};
+
+function openDetail(id, noScroll){
+  var j=getJobs().filter(function(x){return x.id===id;})[0];
+  if(!j) return;
+  var p=j.prep||{};
+  document.getElementById("view-detail").innerHTML=
+    '<button class="back" onclick="showDashboard()">&lsaquo; Back to pipeline</button>'+
+    '<div class="detail-head"><div class="detail-head-text">'+
+      '<h1>'+esc(j.role)+'</h1>'+
+      '<div class="sub"><b>'+esc(j.company)+'</b></div>'+
+    '</div>'+linkButton(j)+'</div>'+
+    glance(j)+
+    nextStepBand(j)+
+    prepDossier(p)+
+    statusActivity(j);
+  showView("detail"); if(!noScroll) window.scrollTo(0,0);
+}
+
+function helpDot(kind){
+  var pop=(kind==="fit")?FIT_HELP:EXC_HELP;
+  return '<span class="help" role="button" tabindex="0" aria-label="Score legend">?<span class="help-pop">'+pop+'</span></span>';
+}
+function stageBadge(j){
+  return '<span class="badge" style="background:'+(STAGE_COLOR[j.stage]||"var(--muted)")+';color:'+(STAGE_TEXT[j.stage]||"#FBF7F0")+'">'+esc(j.stage||"—")+'</span>';
+}
+function excitementControl(j){
+  var cur=j.excitement||0, out='<span class="pips">';
+  for(var n=1;n<=5;n++){
+    out+='<button type="button" class="pip'+(n<=cur?" on":"")+'" aria-label="Set excitement to '+n+'" onclick="setExcitement(\''+j.id+'\','+n+')">'+n+'</button>';
+  }
+  return out+'</span>';
+}
+function glanceItem(label,val){
+  return '<div class="glance-item"><div class="glance-k">'+label+'</div><div class="glance-v">'+val+'</div></div>';
+}
+function glance(j){
+  return '<section class="glance">'+
+    glanceItem("Stage",stageBadge(j))+
+    glanceItem("Fit"+helpDot("fit"),(j.fit?esc(j.fit+"/5"):"—"))+
+    glanceItem("Excitement"+helpDot("exc"),excitementControl(j))+
+    '<div class="glance-item"><div class="glance-k">Comp</div><div class="glance-v">'+esc(j.comp||"—")+'</div>'+
+      '<button type="button" class="navlink" style="align-self:flex-start;margin-top:4px" onclick="showComp()">Check comp <span aria-hidden="true">&rarr;</span></button></div>'+
+    glanceItem("Work mode",esc(j.workMode||"—"))+
+    glanceItem("Source",esc(j.source||"—"))+
+  '</section>';
+}
+function nextStepBand(j){
+  var val=(j.nextAction||"").trim();
+  var isDefault=!val;
+  var shown=val||NEXT_DEFAULTS[j.stage]||"No suggested step for this stage.";
+  return '<section class="nextstep">'+
+    '<div class="nextstep-head"><span class="nextstep-eyebrow">Recommended next step</span>'+
+      '<button class="link-btn" type="button" onclick="toggleNextEdit()">Edit</button></div>'+
+    '<div id="nextstep-view" class="nextstep-body'+(isDefault?" is-default":"")+'">'+esc(shown)+
+      (isDefault?'<span class="nextstep-tag">Suggested from stage — not saved until you edit</span>':"")+'</div>'+
+    '<div id="nextstep-edit" class="hidden">'+
+      '<textarea id="nextstep-input" rows="2" placeholder="'+esc(NEXT_DEFAULTS[j.stage]||"Describe the next action…")+'">'+esc(val)+'</textarea>'+
+      '<div class="edit-actions">'+
+        '<button class="save-btn" id="nextstep-save" onclick="saveNextAction(\''+j.id+'\')">Save next action</button>'+
+        '<button class="link-btn" type="button" onclick="toggleNextEdit()">Cancel</button>'+
+        '<span class="edit-status" id="nextstep-status"></span>'+
+      '</div>'+
+    '</div>'+
+  '</section>';
+}
+function toggleNextEdit(){
+  var v=document.getElementById("nextstep-view"), e=document.getElementById("nextstep-edit");
+  if(v) v.classList.toggle("hidden");
+  if(e){ e.classList.toggle("hidden"); if(!e.classList.contains("hidden")){ var i=document.getElementById("nextstep-input"); if(i) i.focus(); } }
+}
+function prepRow(title,content,callout){
+  var body=content
+    ? (callout?'<div class="callout">'+esc(content)+'</div>':'<p class="body">'+esc(content)+'</p>')
+    : '<div class="empty">No prep authored yet.</div>';
+  return '<details class="prep-row"><summary><span class="t">'+esc(title)+'</span>'+(content?"":'<span class="prep-hint">empty</span>')+'</summary><div class="prep-content">'+body+'</div></details>';
+}
+function prepDossier(p){
+  return '<div class="sec-eyebrow"><span class="num">&#9670;</span> Prep dossier</div>'+
+    '<div class="prep-wrap">'+
+      prepRow("Company Background & History",p.background)+
+      prepRow("Edge Facts",p.edge,true)+
+      prepRow("Questions to Ask",p.questions)+
+      prepRow("Likely Questions & Prep",p.likely)+
+    '</div>';
+}
+function statusActivity(j){
+  var opts=STAGE_ORDER.map(function(s){return '<option value="'+esc(s)+'"'+(s===j.stage?" selected":"")+'>'+esc(s)+'</option>';}).join("");
+  return '<section class="card edit-card"><h2>Status &amp; activity</h2>'+
+    '<label class="fld" for="edit-stage">Stage</label>'+
+    '<select id="edit-stage" onchange="saveStage(\''+j.id+'\')">'+opts+'</select>'+
+    '<div class="edit-status" id="stage-status"></div>'+
+    '<div class="edit-divider"></div>'+
+    '<label class="fld">Excitement '+helpDot("exc")+'</label>'+
+    '<div class="edit-actions">'+excitementControl(j)+'<span class="edit-status" id="exc-status"></span></div>'+
+    '<div class="edit-divider"></div>'+
+    '<label class="fld">Activity log</label>'+
+    (j.notes?'<p class="body">'+esc(j.notes)+'</p>':'<div class="empty">No notes yet.</div>')+
+    '<label class="fld" for="edit-note" style="margin-top:16px">Add a dated note</label>'+
+    '<textarea id="edit-note" rows="2" placeholder="What happened? A timestamped line (Arizona time) is appended below — nothing is overwritten."></textarea>'+
+    '<div class="edit-actions">'+
+      '<button class="save-btn" id="edit-note-btn" onclick="addNote(\''+j.id+'\')">Add dated note</button>'+
+      '<span class="edit-status" id="note-status"></span>'+
+    '</div>'+
+    '<div class="readonly-note">Writes only Stage, Excitement, Next Action, and Notes · Fit is read-only · Notes are append-only.</div>'+
+  '</section>';
+}
+
+/* ---- Write handlers (update-job): Stage, Next Action, Excitement, Notes ---- */
+async function postUpdate(payload){
+  var resp=await fetch("/.netlify/functions/update-job",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+  var data=await resp.json();
+  if(!resp.ok||(data&&data.error)){ throw new Error((data&&data.error)||("HTTP "+resp.status)); }
+  return data;
+}
+function flashStatus(id,msg,cls){ var el=document.getElementById(id); if(el){ el.className="edit-status"+(cls?" "+cls:""); el.textContent=msg; } }
+
+/* Re-render the detail in place, preserving scroll position and which prep rows are open. */
+function rerenderDetail(id){
+  var open=[], rows=document.querySelectorAll("#view-detail details.prep-row");
+  for(var i=0;i<rows.length;i++){ if(rows[i].open) open.push(i); }
+  var y=window.scrollY;
+  openDetail(id,true);
+  rows=document.querySelectorAll("#view-detail details.prep-row");
+  for(var k=0;k<rows.length;k++){ if(open.indexOf(k)>=0) rows[k].open=true; }
+  window.scrollTo(0,y);
+}
+
+async function saveStage(id){
+  var sel=document.getElementById("edit-stage"); var stage=sel?sel.value:"";
+  flashStatus("stage-status","Saving…","");
+  try{
+    var data=await postUpdate({id:id,stage:stage});
+    var job=getJobs().filter(function(x){return x.id===id;})[0]; if(job) job.stage=data.stage;
+    renderDashboard(); rerenderDetail(id);
+    flashStatus("stage-status","Saved ✓","ok");
+  }catch(err){ flashStatus("stage-status","Couldn't save: "+err.message,"err"); }
+}
+
+async function setExcitement(id,n){
+  flashStatus("exc-status","Saving…","");
+  try{
+    var data=await postUpdate({id:id,excitement:n});
+    var job=getJobs().filter(function(x){return x.id===id;})[0]; if(job) job.excitement=data.excitement;
+    rerenderDetail(id);
+    flashStatus("exc-status","Saved ✓","ok");
+  }catch(err){ flashStatus("exc-status","Couldn't save: "+err.message,"err"); }
+}
+
+async function saveNextAction(id){
+  var input=document.getElementById("nextstep-input"); var val=input?input.value:"";
+  flashStatus("nextstep-status","Saving…","");
+  try{
+    var data=await postUpdate({id:id,nextAction:val});
+    var job=getJobs().filter(function(x){return x.id===id;})[0]; if(job) job.nextAction=data.nextAction;
+    renderDashboard(); rerenderDetail(id);
+  }catch(err){ flashStatus("nextstep-status","Couldn't save: "+err.message,"err"); }
+}
+
+async function addNote(id){
+  var ta=document.getElementById("edit-note");
+  var text=(ta&&ta.value||"").trim();
+  if(!text){ flashStatus("note-status","Type a note first.","err"); return; }
+  flashStatus("note-status","Adding…","");
+  try{
+    var data=await postUpdate({id:id,noteAppend:text});
+    var job=getJobs().filter(function(x){return x.id===id;})[0]; if(job) job.notes=data.notes;
+    rerenderDetail(id);
+    flashStatus("note-status","Note added ✓","ok");
+  }catch(err){ flashStatus("note-status","Couldn't add note: "+err.message,"err"); }
+}
+
+function showView(v){
+  document.getElementById("view-dashboard").classList.toggle("hidden",v!=="dashboard");
+  document.getElementById("view-detail").classList.toggle("hidden",v!=="detail");
+}
+function showDashboard(){ showView("dashboard"); window.scrollTo(0,0); }
+
+document.getElementById("closedToggle").addEventListener("click",function(){
+  this.classList.toggle("on");
+  this.textContent=this.classList.contains("on")?"Hide closed":"Show closed";
+  renderDashboard();
+});
+
+/* ============================================================
+   COMP VIEW — client-side math only. No Airtable reads/writes;
+   independent of getJobs()/postUpdate() and the write path.
+   ============================================================ */
+function compNum(id){ var el=document.getElementById(id); var v=parseFloat(el&&el.value); return isFinite(v)?v:0; }
+function compMoney(n){ return "$"+Math.round(n).toLocaleString("en-US"); }
+function compRef(n){ n=Math.round(n); return (n%1000===0)?("$"+(n/1000)+"K"):compMoney(n); }
+
+function showComp(){
+  document.getElementById("view-dashboard").classList.add("hidden");
+  document.getElementById("view-detail").classList.add("hidden");
+  document.getElementById("view-comp").classList.remove("hidden");
+  window.scrollTo(0,0);
+}
+function compBack(){
+  document.getElementById("view-comp").classList.add("hidden");
+  document.getElementById("view-dashboard").classList.remove("hidden");
+  window.scrollTo(0,0);
+}
+
+function computeW2(){
+  var base=compNum("w2_base"), bonus=compNum("w2_bonus"), equity=compNum("w2_equity"),
+      benefits=compNum("w2_benefits"), floor=compNum("w2_floor");
+  var cash=base+bonus;
+  var total=base+bonus+equity+benefits;
+  var gap=cash-floor;
+  document.getElementById("w2_cash").textContent=compMoney(cash);
+  document.getElementById("w2_total").textContent=compMoney(total);
+  var lead = (gap<0)
+    ? ("Cash lands "+compMoney(Math.abs(gap))+" under your "+compRef(floor)+" reference")
+    : ("Cash clears your reference by "+compMoney(gap));
+  var extra="";
+  if(gap<0){
+    if(total>=floor){ extra="Worth noting: total comp of "+compMoney(total)+", including benefits, clears the reference."; }
+    else if(total>=floor-5000){ extra="Worth noting: total comp of "+compMoney(total)+", including benefits, lands close to the reference."; }
+  }
+  document.getElementById("w2_banner").innerHTML =
+    '<div class="lead">'+lead+'</div>'+
+    (extra?'<div class="comp-note" style="margin-top:8px">'+extra+'</div>':"");
+}
+
+function compute1099(){
+  var target=compNum("c_target"), hours=compNum("c_hours"), benefits=compNum("c_benefits"),
+      overhead=compNum("c_overhead"), tax=compNum("c_tax");
+  var required=(target+benefits)*(1+overhead/100)*(1+tax/100);
+  var rateEl=document.getElementById("c_rate");
+  if(hours>0){
+    rateEl.textContent="≈ $"+Math.round(required/hours).toLocaleString("en-US")+"/hr";
+  } else {
+    rateEl.textContent="≈ —/hr";
+  }
+  var naive=Math.round(target/2080);
+  document.getElementById("c_naive").textContent=
+    "Straight "+compMoney(target)+" ÷ 2,080 hrs = ~ $"+naive.toLocaleString("en-US")+"/hr";
+}
+
+loadJobs();
+computeW2();
+compute1099();
+</script>
+</body>
+</html>
