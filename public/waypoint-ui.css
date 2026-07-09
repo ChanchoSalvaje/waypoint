@@ -1,0 +1,268 @@
+/* ============================================================
+   WAYPOINT UI — shared design system
+   ONE system: tokens are DESIGN.md's (source of truth), reusing the same
+   names as index.html's :root so there is no second palette / no drift.
+   Component classes below are layered on top of those tokens.
+   Link from every page:  <link rel="stylesheet" href="/waypoint-ui.css">
+   ============================================================ */
+
+:root{
+  /* ---- Core palette — DESIGN.md functional mapping (names match index.html) ---- */
+  --paper:#F3EEE4;        /* page background — Warm Parchment (lightened) */
+  --surface:#FCFAF6;      /* cards / surfaces — warm white              */
+  --ink:#25283D;          /* headings + body — Midnight Indigo          */
+  --muted:#6B6459;        /* muted / secondary text                     */
+  --faint:#9A958C;        /* faint labels                               */
+  --line:#E3DCCF;         /* hairlines / borders                        */
+  --steel:#2F4A3A;        /* ground / nav / header band — Deep Mesquite  */
+  --steel-2:#6F8796;      /* secondary / info / links — Soft Steel Blue  */
+  --voltage:#B85C38;      /* accent / primary — Ember Copper            */
+  --voltage-soft:#F5E9E1; /* accent soft tint — callout / next-step bg   */
+  --live:#2F4A3A;         /* success (ground green)                     */
+  --flag:#B23B3B;         /* alert                                      */
+  --flag-soft:#F6E3DD;    /* alert soft bg                              */
+  /* stage badges (DESIGN.md) */
+  --saved:#6F8796; --tailoring:#B85C38; --ready:#A66A4C; --applied:#25283D;
+  --screening:#2F4A3A; --interviewing:#8B4F55; --offer:#C7A45A; --closed:#9A958C;
+
+  /* ---- Tokens ADDED for these components (also recorded in DESIGN.md) ---- */
+  --voltage-deep:#A2481F; /* Ember Copper, deep — small accent text (contrast) */
+  --voltage-line:#EBD6C7; /* border for accent-soft / callout surfaces         */
+  --steel-deep:#244639;   /* Deep Mesquite, deeper — button hover / active      */
+  --gold:#C7A45A;         /* Antique Gold — eyebrow on dark (same hex as --offer)*/
+  --panel:#EDE7DA;        /* subtle warm fill — chips / recessed               */
+  --on-dark:#FBF7F0;      /* light text on dark/accent surfaces (DESIGN.md)     */
+
+  /* ---- Type + shape (DESIGN.md: clean sans; see note re: serif in DESIGN.md) ---- */
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --r:14px;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;}
+h1{color:var(--ink);font-weight:700;letter-spacing:-.02em;margin:0;font-size:clamp(26px,4vw,38px);line-height:1.1;}
+h2{color:var(--ink);font-weight:700;letter-spacing:-.01em;margin:0;font-size:17px;}
+h3{color:var(--ink);font-weight:700;margin:0 0 6px;font-size:15px;}
+
+/* Shared green header (put on EVERY page) */
+.topbar{background:var(--steel);color:var(--on-dark);display:flex;align-items:center;justify-content:space-between;padding:15px 30px;}
+.topbar .brand{display:flex;align-items:center;gap:11px;}
+.topbar .star{color:var(--voltage);font-size:20px;line-height:1;}                 /* Ember Copper mark, per DESIGN.md */
+.topbar .name{font-weight:500;font-size:19px;color:var(--paper);letter-spacing:-.01em;} /* Warm Parchment wordmark on dark */
+.topbar .sub{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);} /* Antique Gold eyebrow on dark */
+.top-btn{font-size:13px;color:var(--on-dark);border:1px solid rgba(243,238,228,.34);border-radius:999px;padding:7px 16px;background:transparent;font-weight:500;cursor:pointer;}
+.top-btn:hover{background:rgba(243,238,228,.12);}
+.page{padding:34px 40px 44px;max-width:1040px;margin:0 auto;}
+.back{font-size:13.5px;color:var(--voltage-deep);font-weight:600;margin-bottom:18px;display:inline-block;}
+.accent-underline{width:54px;height:3px;background:var(--voltage);border-radius:2px;margin:16px 0 4px;}
+
+/* Eyebrow / section label */
+.eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--voltage-deep);margin:30px 0 12px;display:flex;align-items:center;gap:8px;}
+.eyebrow::before{content:"\25C6";color:var(--voltage);font-size:10px;}
+
+/* Cards, KPI tiles, list rows (flat + hairline, matching the app) */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;}
+.grid{display:grid;gap:16px;}
+.grid-4{grid-template-columns:repeat(4,1fr);}
+.kpi .lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;}
+.kpi .num{font-size:32px;font-weight:700;color:var(--ink);margin-top:8px;line-height:1;}
+.listcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;}
+.row{display:flex;align-items:center;gap:15px;padding:16px 20px;border-top:1px solid var(--line);}
+.row:first-child{border-top:none;}
+.av{width:34px;height:34px;border-radius:50%;flex:none;color:var(--on-dark);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;background:var(--voltage);}
+
+/* Status pills */
+.pill-s{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 11px;border-radius:999px;white-space:nowrap;display:inline-block;}
+.s-green{background:var(--steel);color:var(--on-dark);}
+.s-terra{background:var(--voltage);color:var(--on-dark);}
+.s-slate{background:var(--panel);color:var(--muted);}
+/* Stage badges — all 8 DESIGN.md stage colors. Light text except Offer & Closed (dark, for legibility). */
+.pill-s.st-saved{background:var(--saved);color:var(--on-dark);}
+.pill-s.st-tailoring{background:var(--tailoring);color:var(--on-dark);}
+.pill-s.st-ready{background:var(--ready);color:var(--on-dark);}
+.pill-s.st-applied{background:var(--applied);color:var(--on-dark);}
+.pill-s.st-screening{background:var(--screening);color:var(--on-dark);}
+.pill-s.st-interviewing{background:var(--interviewing);color:var(--on-dark);}
+.pill-s.st-offer{background:var(--offer);color:var(--ink);}
+.pill-s.st-closed{background:var(--closed);color:var(--ink);}
+
+/* Fact chips */
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.fact{font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 13px;}
+.fact b{color:var(--ink);font-weight:700;}
+
+/* Callout (accent-soft) */
+.callout{background:var(--voltage-soft);border:1px solid var(--voltage-line);border-radius:var(--r);padding:18px 22px;margin-top:20px;position:relative;}
+.callout__label{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--voltage-deep);margin:0 0 7px;}
+.callout p{margin:0;color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.55;}
+
+/* Section header (dossier) */
+.section-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.marker{width:12px;height:12px;background:var(--voltage);border-radius:2px;flex:none;}
+
+/* Definition list (labeled fact blocks) */
+.deflist{border-left:3px solid var(--voltage);padding-left:22px;}
+.deflist__item{padding:14px 0;border-top:1px solid var(--line);}
+.deflist__item:first-child{padding-top:0;border-top:none;}
+.deflist__label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);display:block;margin-bottom:5px;}
+.deflist__label--flag{color:var(--voltage-deep);}
+.deflist__item p{margin:0;font-family:var(--sans);font-size:15.5px;line-height:1.6;color:var(--ink);}
+.flag-note{background:var(--voltage-soft);border:1px solid var(--voltage-line);border-radius:6px;padding:11px 14px;margin-top:8px;font-family:var(--sans);font-size:15px;color:var(--ink);}
+
+/* Lists */
+.prose{font-family:var(--sans);font-size:16px;line-height:1.7;color:var(--ink);margin:0;}
+ul.list-dot{list-style:none;margin:0;padding:0;}
+ul.list-dot li{font-family:var(--sans);font-size:15.5px;line-height:1.5;padding:3px 0 3px 16px;position:relative;color:var(--ink);}
+ul.list-dot li::before{content:"";position:absolute;left:0;top:12px;width:5px;height:5px;border-radius:50%;background:var(--voltage);}
+ul.list-dot b{color:var(--ink);font-weight:600;}
+ul.list-diamond{list-style:none;margin:0;padding:0;}
+ul.list-diamond li{position:relative;padding:0 0 0 26px;margin-bottom:13px;font-family:var(--sans);font-size:16px;line-height:1.55;color:var(--ink);}
+ul.list-diamond li::before{content:"";position:absolute;left:2px;top:9px;width:8px;height:8px;background:var(--voltage);border-radius:2px;transform:rotate(45deg);}
+ul.list-diamond b{color:var(--ink);font-weight:600;}
+
+/* Buttons + form inputs */
+.btn-green{background:var(--steel);color:var(--on-dark);border:none;border-radius:9px;padding:11px 18px;font-weight:600;font-size:14px;cursor:pointer;}
+.btn-green:hover{background:var(--steel-deep);}
+.btn-ghost{font-size:12.5px;color:var(--voltage-deep);border:1px solid var(--voltage-line);background:var(--voltage-soft);border-radius:8px;padding:7px 13px;font-weight:600;display:inline-block;cursor:pointer;}
+input,select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 13px;color:var(--ink);font-size:14px;font-family:var(--sans);}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--voltage);outline-offset:0;border-color:var(--voltage);}
+
+/* Footer + responsive + print */
+.foot{text-align:center;color:var(--muted);font-size:12.5px;padding:18px 0;}
+@media (max-width:720px){.grid-4{grid-template-columns:1fr 1fr;}}
+@media (max-width:560px){.page{padding:24px 20px;}.grid-4{grid-template-columns:1fr;}h1{font-size:25px;}}
+@media print{body{background:#fff;}.topbar{-webkit-print-color-adjust:exact;print-color-adjust:exact;}.card,.callout,.listcard,.deflist{break-inside:avoid;}}
+
+/* ============================================================
+   WAYPOINT APP COMPONENTS — view-specific styles for the pipeline
+   SPA (dashboard / job detail / comp). Layered on the tokens above;
+   the design-system primitives (card, kpi, pill-s, facts, callout,
+   deflist, lists, buttons, inputs) come from the section above.
+   ============================================================ */
+.hidden{display:none!important}
+body{background:radial-gradient(1200px 500px at 80% -10%, rgba(47,74,58,.06), transparent 60%), var(--paper);}
+:focus-visible{outline:2px solid var(--voltage);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* compass-star mark inside the green topbar (DESIGN.md logo) */
+.topbar .brand-mark{flex:0 0 auto;display:block}
+
+/* greeting sub + dividers + shared small text */
+.sub{color:var(--muted);font-size:15px}
+.sub b{color:var(--ink)}
+.rule{height:2px;background:linear-gradient(90deg,var(--voltage) 0 64px,var(--line) 64px);margin:22px 0 26px;border-radius:2px}
+.empty{color:var(--faint);font-size:14px;font-style:italic;padding:6px 0}
+.readonly-note{font-family:ui-monospace,monospace;font-size:11px;color:var(--faint);margin-top:8px}
+p.body{color:var(--ink);font-size:15px;margin:0 0 12px;white-space:pre-wrap}
+
+/* toolbar (section label + closed toggle) */
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin:26px 0 10px;gap:12px;flex-wrap:wrap}
+.toolbar .eyebrow{margin:0}
+.toggle{font-size:13px;color:var(--steel-2);cursor:pointer;font-weight:600;background:none;border:1px solid var(--line);border-radius:9px;padding:7px 12px}
+.toggle.on{background:var(--steel);color:var(--on-dark);border-color:var(--steel)}
+
+/* Today list + Opportunities list rows */
+.today{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:8px}
+.na{display:flex;gap:14px;align-items:center;padding:14px 16px;border-radius:11px;cursor:pointer;transition:background .12s;border-bottom:1px solid var(--line)}
+.na:last-child{border-bottom:none}
+.na:hover{background:var(--panel)}
+.na .body{flex:1;min-width:0}
+.na .act{font-size:13.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chev{color:var(--faint);flex:0 0 auto}
+.listcard .row{cursor:pointer;transition:background .12s}
+.listcard .row:hover{background:var(--panel)}
+.row-main{flex:1;min-width:0}
+.co{font-weight:650;font-size:15px;color:var(--ink)}
+.na .co{font-size:14.5px}
+.role{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meta{font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:2px;flex:0 0 auto}
+.right{display:flex;align-items:center;gap:12px;flex:0 0 auto;margin-left:auto}
+.fit{font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--steel-2);white-space:nowrap}
+.fit .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--voltage);margin-right:3px}
+
+/* monogram avatar (per-company tint set inline in JS) */
+.mono-badge{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;color:var(--paper);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;font-size:14px;line-height:1;user-select:none}
+
+/* external-link icon + copper "Open application" button */
+.ext-link{display:inline-flex;align-items:center;justify-content:center;color:var(--voltage);flex:0 0 auto;padding:3px;border-radius:6px;text-decoration:none}
+.ext-link:hover{background:var(--voltage-soft)}
+.ext-ico{display:block}
+.posting-btn{display:inline-flex;align-items:center;gap:6px;background:var(--voltage);color:var(--on-dark);font-weight:650;font-size:14px;text-decoration:none;padding:10px 16px;border-radius:10px}
+.posting-btn:hover{background:var(--voltage-deep)}
+
+/* detail header */
+.detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:8px}
+.detail-head-text{min-width:0}
+.detail-head .posting-btn{margin-top:6px;flex:0 0 auto}
+
+/* at-a-glance: facts carry inline controls */
+.facts .fact{display:inline-flex;align-items:center;gap:6px}
+.fact .pips{margin-left:2px}
+
+/* help "?" tooltip */
+.help{position:relative;display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--steel-2);color:var(--steel-2);font-size:10px;font-weight:700;cursor:help;background:none;margin-left:5px;line-height:1;padding:0;font-family:ui-monospace,monospace}
+.help .help-pop{display:none;position:absolute;left:-6px;top:150%;z-index:30;width:250px;background:var(--ink);color:var(--paper);font-family:var(--sans);font-weight:400;font-size:12px;line-height:1.5;letter-spacing:0;text-transform:none;padding:10px 12px;border-radius:9px;box-shadow:0 8px 24px rgba(37,40,61,.28)}
+.help:hover .help-pop,.help:focus .help-pop{display:block}
+.help-pop b{color:var(--surface);font-weight:600}
+
+/* excitement pips */
+.pips{display:inline-flex;gap:4px;vertical-align:middle}
+.pip{font:inherit;font-size:12px;font-weight:700;width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer;line-height:1;padding:0}
+.pip.on{background:var(--voltage);border-color:var(--voltage);color:var(--on-dark)}
+.pip:hover{border-color:var(--voltage)}
+.pip:disabled{opacity:.5;cursor:default}
+
+/* recommended next step (built on .callout) */
+.callout-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:7px}
+.callout .ns-default{color:var(--muted);font-style:italic}
+.callout .ns-tag{display:block;margin-top:6px;font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.06em;color:var(--faint);font-style:normal}
+#nextstep-edit textarea{width:100%;margin:6px 0 12px;min-height:52px;line-height:1.4;resize:vertical}
+.link-btn{background:none;border:none;color:var(--steel-2);font:inherit;font-weight:600;font-size:13px;cursor:pointer;padding:2px 4px}
+.link-btn:hover{color:var(--voltage);text-decoration:underline}
+
+/* prep dossier (collapsible <details>) */
+.prep-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:18px}
+.prep-row{border-bottom:1px solid var(--line)}
+.prep-row:last-child{border-bottom:none}
+.prep-row summary{cursor:pointer;padding:14px 18px;font-weight:650;font-size:15px;color:var(--ink);display:flex;align-items:center;gap:10px;list-style:none}
+.prep-row summary::-webkit-details-marker{display:none}
+.prep-row summary:hover{background:var(--panel)}
+.prep-row summary .t{flex:1;min-width:0}
+.prep-row summary::after{content:"\25B8";color:var(--faint);font-size:12px}
+.prep-row[open] summary::after{content:"\25BE"}
+.prep-hint{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:600}
+.prep-content{padding:2px 18px 18px}
+.prep-content .deflist,.prep-content .prose,.prep-content ul,.prep-content .facts{margin-top:6px}
+
+/* edit form helpers (Status & activity, next-step) */
+.fld{display:block;font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:0 0 6px}
+.edit-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.edit-divider{height:1px;background:var(--line);margin:20px 0}
+.edit-status{font-size:13px;color:var(--muted)}
+.edit-status.ok{color:var(--live);font-weight:600}
+.edit-status.err{color:var(--flag);font-weight:600}
+.card select,.card textarea{width:100%;margin-bottom:14px}
+.card textarea{min-height:52px;line-height:1.4;resize:vertical}
+
+/* comp view */
+.comp-grid{display:grid;grid-template-columns:1fr auto;gap:10px 16px;align-items:center;max-width:460px;margin-bottom:4px}
+.comp-grid label{font-size:14px;color:var(--ink)}
+.comp-grid input{width:150px;text-align:right}
+.comp-result{display:flex;flex-wrap:wrap;gap:14px;margin:18px 0 12px}
+.comp-figure{flex:1 1 180px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:15px 16px}
+.comp-figure .k{font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+.comp-figure .v{font-size:26px;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
+.comp-banner{background:var(--voltage-soft);border:1px solid var(--voltage-line);border-radius:12px;padding:14px 16px;font-size:14.5px;color:var(--ink)}
+.comp-banner .lead{font-weight:650}
+.comp-note{font-size:13px;color:var(--muted)}
+.comp-sub{font-size:13px;color:var(--muted);margin-top:8px}
+.comp-rate{background:#EAF0EC;border:1px solid #D3E0D6;border-radius:12px;padding:16px 18px;margin-top:16px;color:var(--steel)}
+.comp-rate .k{font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#4B5F52;margin-bottom:6px}
+.comp-rate .v{font-size:30px;font-weight:700;letter-spacing:-.01em}
+.comp-rate .naive{font-size:13.5px;color:#4B5F52;margin-top:8px}
+.comp-caveat{font-size:12px;color:var(--faint);font-style:italic;margin-top:6px}
+
+/* footer + mobile */
+footer{margin-top:28px;text-align:center;color:var(--faint);font-size:12px}
+@media (max-width:640px){.meta{display:none}}

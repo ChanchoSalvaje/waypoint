@@ -33,6 +33,15 @@ A dashboard uses ~1 accent + 1–2 structural + neutrals. Meaning colors map to 
 - **Hairlines / borders:** `#E3DCCF`
 - **Muted text:** `#6B6459`
 
+### Extended tokens (added for the shared `public/waypoint-ui.css` components)
+Same hue families as the core palette — defined so components reference tokens, never hardcoded hex.
+- **Accent, deep (small text):** `#A2481F` — Ember Copper darkened for legible small/UI text on parchment.
+- **Accent-soft border:** `#EBD6C7` — hairline for callout / next-step (accent-soft) surfaces.
+- **Ground, deep (hover / active):** `#244639` — Deep Mesquite darkened for button hover/pressed states.
+- **Antique Gold (functional):** `#C7A45A` — the palette's Antique Gold used as an on-dark eyebrow color (same hex as the Offer badge).
+- **Panel / subtle fill:** `#EDE7DA` — warm recessed fill for chips and inset rows.
+- **On-dark text:** `#FBF7F0` — light text on dark/accent surfaces (same value as the stage-badge light text).
+
 ## Stage badges (single-select → hex)
 Badge text is light `#FBF7F0`, except **Offer** which uses dark `#25283D`.
 - Saved → `#6F8796` (Soft Steel Blue — neutral, early)
@@ -64,3 +73,4 @@ Plus 32×32 and 180×180 PNG fallbacks in `public/`.
 ## Change log
 - v1 (2026-07-06): initial identity — personality palette adopted, functional mapping + stage colors set, compass-star logo + favicon defined. Retired the earlier guessed burnt-orange accent (`#C2571A`) in favor of Ember Copper.
 - v1.1 (2026-07-06): visual-identity pass deployed to production (`waypoint-hq`) — palette applied, favicon live. Header refined into the full logo lockup (compass-star mark + "Waypoint" wordmark + "COMMAND CENTER" eyebrow), sized smaller than the "Here is the way, Tim." greeting so the two don't compete.
+- v1.2 (2026-07-06): started `public/waypoint-ui.css` — a shared stylesheet reusing these tokens (same CSS-var names as index.html's `:root`) with reusable component classes (topbar, card, kpi, row, pill, facts, callout, deflist, lists, buttons, inputs). Added the six **Extended tokens** above. Kept the sheet **sans-only** — the "serif for long-form" idea was dropped as a conflict with the "clean sans" rule here. Open discrepancies between this doc and the shipped `index.html` still to reconcile: index.html renders small letter-spaced labels in **monospace** (not documented here) and uses **700-weight** headings (this doc still says "two weights: 400/500").
