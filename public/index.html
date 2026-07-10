@@ -169,6 +169,7 @@ function renderDashboard(){
       '<div class="row-main"><div class="co">'+esc(j.company)+'</div><div class="role">'+esc(j.role)+'</div></div>'+
       '<div class="meta"><span>'+esc(j.comp||"—")+'</span><span>'+esc(j.workMode||"")+'</span></div>'+
       '<div class="right">'+
+        pursueToggle(j,"row")+
         (j.fit?'<span class="fit"><span class="dot"></span>'+j.fit+'/5</span>':'')+
         stageBadge(j)+
         linkIcon(j)+
@@ -210,6 +211,44 @@ function linkButton(j){
   return '<a class="posting-btn" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">Open application <span aria-hidden="true">&rarr;</span></a>';
 }
 
+/* ---- Pursue toggle (writes via update-job; queues the job for enrichment) ----
+   The record's pursue value in JOBS is the single source of truth; the row and
+   the detail card both render from it, so they always match. */
+var CURRENT_DETAIL=null;
+function pursueToggle(j, place){
+  var on=!!j.pursue;
+  var tip=on?"Pursuing — queued for enrichment":"Tick to pursue (queue for enrichment)";
+  return '<label class="pursue'+(on?" on":"")+'" title="'+tip+'" onclick="event.stopPropagation()">'+
+    '<input type="checkbox"'+(on?" checked":"")+' onchange="togglePursue(\''+j.id+'\',this.checked)" aria-label="Pursue '+esc(j.company)+'"> Pursue</label>';
+}
+function pursueHint(j){
+  if(!j.pursue) return "";
+  var hasBg=!!(j.prep&&j.prep.background&&j.prep.background.trim());
+  return '<span class="pursue-hint">'+(hasBg?"Pursue on · dossier already built":"Queued for enrichment")+'</span>';
+}
+function syncPursueUI(id){
+  renderDashboard();  // rows re-render from JOBS state
+  var dv=document.getElementById("view-detail");
+  if(dv && !dv.classList.contains("hidden") && CURRENT_DETAIL){ rerenderDetail(CURRENT_DETAIL); }
+}
+async function togglePursue(id, want){
+  var job=getJobs().filter(function(x){return x.id===id;})[0];
+  if(!job) return;
+  var prev=!!job.pursue;
+  job.pursue=want;                 // optimistic update of the single source of truth
+  syncPursueUI(id);
+  try{
+    var data=await postUpdate({id:id, pursue:want});
+    job.pursue=!!data.pursue;       // reconcile with the server's confirmed value
+    syncPursueUI(id);
+    flashStatus("pursue-status", want?"Pursue on ✓":"Pursue off ✓", "ok");
+  }catch(err){
+    job.pursue=prev;                // revert BOTH row + card together
+    syncPursueUI(id);
+    flashStatus("pursue-status","Couldn't update Pursue: "+err.message,"err");
+  }
+}
+
 var FIT_HELP='<b>Fit — tool-assessed</b><br>5 Bullseye · 4 Strong · 3 Plausible · 2 Weak · 1 Poor';
 var EXC_HELP='<b>Excitement — self-rated</b><br>5 Thrilled · 4 Energized · 3 Interested · 2 Lukewarm · 1 Flat';
 var NEXT_DEFAULTS={
@@ -225,6 +264,7 @@ var NEXT_DEFAULTS={
 function openDetail(id, noScroll){
   var j=getJobs().filter(function(x){return x.id===id;})[0];
   if(!j) return;
+  CURRENT_DETAIL=id;
   var p=j.prep||{};
   document.getElementById("view-detail").innerHTML=
     '<button class="back" onclick="showDashboard()">&lsaquo; Back to pipeline</button>'+
@@ -391,6 +431,9 @@ function statusActivity(j){
     '<label class="fld">Excitement '+helpDot("exc")+'</label>'+
     '<div class="edit-actions">'+excitementControl(j)+'<span class="edit-status" id="exc-status"></span></div>'+
     '<div class="edit-divider"></div>'+
+    '<label class="fld">Pursue</label>'+
+    '<div class="edit-actions">'+pursueToggle(j,"card")+pursueHint(j)+'<span class="edit-status" id="pursue-status"></span></div>'+
+    '<div class="edit-divider"></div>'+
     '<label class="fld">Activity log</label>'+
     (j.notes?'<p class="body">'+esc(j.notes)+'</p>':'<div class="empty">No notes yet.</div>')+
     '<label class="fld" for="edit-note" style="margin-top:16px">Add a dated note</label>'+
@@ -399,7 +442,7 @@ function statusActivity(j){
       '<button class="btn-green" id="edit-note-btn" onclick="addNote(\''+j.id+'\')">Add dated note</button>'+
       '<span class="edit-status" id="note-status"></span>'+
     '</div>'+
-    '<div class="readonly-note">Writes only Stage, Excitement, Next Action, and Notes · Fit is read-only · Notes are append-only.</div>'+
+    '<div class="readonly-note">Writes only Stage, Excitement, Pursue, Next Action, and Notes · Fit is read-only · Notes are append-only.</div>'+
   '</section>';
 }
 

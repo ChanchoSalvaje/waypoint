@@ -263,6 +263,12 @@ p.body{color:var(--ink);font-size:15px;margin:0 0 12px;white-space:pre-wrap}
 .comp-rate .naive{font-size:13.5px;color:#4B5F52;margin-top:8px}
 .comp-caveat{font-size:12px;color:var(--faint);font-style:italic;margin-top:6px}
 
+/* Pursue toggle (dashboard row + Status & activity card) */
+.pursue{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;user-select:none;white-space:nowrap}
+.pursue input{width:15px;height:15px;margin:0;accent-color:var(--voltage);cursor:pointer;flex:0 0 auto}
+.pursue.on{color:var(--voltage-deep)}
+.pursue-hint{font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.04em;color:var(--voltage-deep);background:var(--voltage-soft);border:1px solid var(--voltage-line);border-radius:999px;padding:3px 9px;white-space:nowrap}
+
 /* footer + mobile */
 footer{margin-top:28px;text-align:center;color:var(--faint);font-size:12px}
 @media (max-width:640px){.meta{display:none}}
