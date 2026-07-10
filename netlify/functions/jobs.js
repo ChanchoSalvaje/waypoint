@@ -26,6 +26,7 @@ const FIELDS = {
   nextActionDate: "fldN1P81pvY2xNl4C", // Next Action Date (date)
   link:           "fldpNcqFRnN7zMzzO", // Link
   source:         "fldVtN8Rdj3b1yDML", // Source (singleSelect)
+  pursue:         "fldk41nshQmCXHanE", // Pursue (checkbox) — queues the job for enrichment
   prepBackground: "fldkmdiZ6NgeFVEp2", // Company Background & History
   prepEdge:       "fldwwUC9CLZ9WHIYA", // Edge Facts
   prepQuestions:  "fldTCQjStup2JH3VP", // Questions to Ask
@@ -49,6 +50,7 @@ function mapRecord(record) {
     nextActionDate: f[FIELDS.nextActionDate] || "",
     link:           f[FIELDS.link] || "",
     source:         f[FIELDS.source] || "",
+    pursue:         !!f[FIELDS.pursue],   // checkbox → boolean (unchecked comes back undefined)
     prep: {
       background: f[FIELDS.prepBackground] || "",
       edge:       f[FIELDS.prepEdge] || "",

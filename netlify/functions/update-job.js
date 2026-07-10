@@ -1,17 +1,24 @@
 // netlify/functions/update-job.js
 // ---------------------------------------------------------------------------
 // Slice 2 — WRITE path (update-only). PATCHes a SINGLE existing record and may
-// write ONLY four whitelisted fields:
+// write ONLY five whitelisted fields:
 //   • Stage       (single-select) — validated against the real option names
 //   • Next Action (text)
 //   • Excitement  (number, integer 1–5) — self-rated. Fit Score stays read-only.
+//   • Pursue      (checkbox/boolean) — ticking it queues the job for the daily
+//                  enrichment run.
 //   • Notes       (text) — APPEND-ONLY: a new dated line is added; existing
 //                  Notes content is read first and never overwritten or deleted.
 //
+// SECURITY: this is a write endpoint. The whole site — including this function —
+// sits behind HTTP Basic Auth enforced by netlify/edge-functions/auth.js (path
+// "/*"), so it is already password-gated in production. Keep it that way: never
+// deploy this publicly without that gate in front of it.
+//
 // Hard guarantees:
 //   - Update-only: PATCHes one record id. Never creates or deletes.
-//   - Field whitelist: only stage / nextAction / excitement / noteAppend are
-//     read from the body, and only those four field IDs are ever written.
+//   - Field whitelist: only stage / nextAction / excitement / pursue / noteAppend
+//     are read from the body, and only those five field IDs are ever written.
 //   - Append-only Notes: the client sends only NEW note text (`noteAppend`).
 //     The server reads the current Notes value and appends
 //     "YYYY-MM-DD: <text>" below it. The client can never supply the full blob,
@@ -29,6 +36,7 @@ const STAGE_FIELD = "fldE1YGHZdjiPIkiR";       // Stage (singleSelect)
 const NEXT_ACTION_FIELD = "fldQjbPglCq07XJJD"; // Next Action (multilineText)
 const NOTES_FIELD = "fldXN9uz1ZcIFtsKm";       // Notes (multilineText)
 const EXCITEMENT_FIELD = "fldOzdAtFpCpi2GVU";  // Excitement (number, integer 1–5)
+const PURSUE_FIELD = "fldk41nshQmCXHanE";      // Pursue (checkbox / boolean)
 
 // Exact live option names for Stage (confirmed against the schema).
 const ALLOWED_STAGES = [
@@ -101,6 +109,14 @@ exports.handler = async function (event) {
     fields[EXCITEMENT_FIELD] = n;
   }
 
+  // Pursue: boolean checkbox. Ticking it queues the job for the daily enrichment run.
+  if (body.pursue !== undefined) {
+    if (typeof body.pursue !== "boolean") {
+      return json(400, { error: "Pursue must be true or false." });
+    }
+    fields[PURSUE_FIELD] = body.pursue;
+  }
+
   // Notes are append-only. Validate the new text here; the actual read+append
   // happens below (it needs an await).
   let noteText = null;
@@ -115,7 +131,7 @@ exports.handler = async function (event) {
   }
 
   if (Object.keys(fields).length === 0 && noteText === null) {
-    return json(400, { error: "Nothing to update — provide stage, nextAction, excitement, and/or noteAppend." });
+    return json(400, { error: "Nothing to update — provide stage, nextAction, excitement, pursue, and/or noteAppend." });
   }
 
   try {
@@ -161,6 +177,7 @@ exports.handler = async function (event) {
       nextAction: pick(NEXT_ACTION_FIELD, "Next Action") || "",
       notes: pick(NOTES_FIELD, "Notes") || "",
       excitement: pick(EXCITEMENT_FIELD, "Excitement") ?? null,
+      pursue: !!pick(PURSUE_FIELD, "Pursue"),
     });
   } catch (err) {
     return json(500, { error: "Unexpected error updating Airtable.", detail: String(err) });
