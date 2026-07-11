@@ -167,7 +167,7 @@ function renderDashboard(){
     return '<div class="row" onclick="openDetail(\''+j.id+'\')">'+
       monogram(j.company)+
       '<div class="row-main"><div class="co">'+esc(j.company)+'</div><div class="role">'+esc(j.role)+'</div></div>'+
-      '<div class="meta"><span>'+esc(j.comp||"—")+'</span><span>'+esc(j.workMode||"")+'</span></div>'+
+      '<div class="meta"><span title="'+esc(j.comp||"")+'">'+esc(j.comp||"—")+'</span><span title="'+esc(j.workMode||"")+'">'+esc(j.workMode||"")+'</span></div>'+
       '<div class="right">'+
         pursueToggle(j,"row")+
         (j.fit?'<span class="fit"><span class="dot"></span>'+j.fit+'/5</span>':'')+
@@ -298,9 +298,9 @@ function glance(j){
     stageBadge(j)+
     '<span class="fact">Fit'+helpDot("fit")+' <b>'+(j.fit?esc(j.fit+"/5"):"—")+'</b></span>'+
     '<span class="fact">Excitement'+helpDot("exc")+' '+excitementControl(j)+'</span>'+
-    '<span class="fact"><b>Comp</b> '+esc(j.comp||"—")+'</span>'+
-    '<span class="fact"><b>Work mode</b> '+esc(j.workMode||"—")+'</span>'+
-    '<span class="fact"><b>Source</b> '+esc(j.source||"—")+'</span>'+
+    '<span class="fact" title="'+esc(j.comp||"")+'"><b>Comp</b> <span class="fval">'+esc(j.comp||"—")+'</span></span>'+
+    '<span class="fact" title="'+esc(j.workMode||"")+'"><b>Work mode</b> <span class="fval">'+esc(j.workMode||"—")+'</span></span>'+
+    '<span class="fact" title="'+esc(j.source||"")+'"><b>Source</b> <span class="fval">'+esc(j.source||"—")+'</span></span>'+
     '<button type="button" class="btn-ghost" onclick="showComp()">Check comp &rarr;</button>'+
   '</div>';
 }
