@@ -13,6 +13,8 @@
 // CLOSE: passing `closeReason` performs an atomic close — Stage→Closed, Pursue→false,
 // Next Action + Next Action By cleared, and an append-only dated Notes line
 // "[YYYY-MM-DD]: Closed by Tim via Waypoint — <reason>. Not a rejection." No delete.
+// REOPEN: passing `reopen:true` sets Stage→Saved and appends
+// "[YYYY-MM-DD]: Reopened by Tim via Waypoint." (optionally with `pursue:true`).
 //
 // SECURITY: this is a write endpoint. The whole site — including this function —
 // sits behind HTTP Basic Auth enforced by netlify/edge-functions/auth.js (path
@@ -151,6 +153,13 @@ exports.handler = async function (event) {
     fields[NEXT_ACTION_FIELD] = "";
     fields[NEXT_ACTION_BY_FIELD] = null;
     appendEntry = `[${phoenixDate()}]: Closed by Tim via Waypoint — ${reason}. Not a rejection.`;
+  }
+
+  // Reopen (undo a Close): Stage→Saved + an append-only dated note. Pursue is only
+  // touched if the caller also passes `pursue` (e.g. re-pursuing forces a reopen).
+  if (body.reopen === true) {
+    fields[STAGE_FIELD] = "Saved";
+    appendEntry = `[${phoenixDate()}]: Reopened by Tim via Waypoint.`;
   }
 
   if (Object.keys(fields).length === 0 && appendEntry === null) {

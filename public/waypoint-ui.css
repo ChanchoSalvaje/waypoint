@@ -281,11 +281,7 @@ footer{margin-top:28px;text-align:center;color:var(--faint);font-size:12px}
    ============================================================ */
 .top-actions{display:flex;gap:10px;align-items:center}
 
-/* Close button — sibling to Pursue; copper, danger-adjacent */
-.close-btn{font:inherit;font-size:12px;font-weight:600;color:var(--voltage-deep);background:var(--voltage-soft);border:1px solid var(--voltage-line);border-radius:8px;padding:4px 11px;cursor:pointer;white-space:nowrap}
-.close-btn:hover{background:var(--voltage);color:var(--on-dark);border-color:var(--voltage)}
-
-/* Confirm modal (Close reason) */
+/* Confirm modal (Close reason / Reopen) */
 .modal-overlay{position:fixed;inset:0;background:rgba(37,40,61,.45);z-index:60}
 .modal-card{position:fixed;z-index:61;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,92vw);background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 18px 50px rgba(37,40,61,.3);padding:22px 24px}
 .modal-card h3{margin:0 0 2px;font-size:18px}
