@@ -275,3 +275,61 @@ p.body{color:var(--ink);font-size:15px;margin:0 0 12px;white-space:pre-wrap}
 /* footer + mobile */
 footer{margin-top:28px;text-align:center;color:var(--faint);font-size:12px}
 @media (max-width:640px){.meta{display:none}}
+
+/* ============================================================
+   SLICE 4 — Settings tab + Close action
+   ============================================================ */
+.top-actions{display:flex;gap:10px;align-items:center}
+
+/* Close button — sibling to Pursue; copper, danger-adjacent */
+.close-btn{font:inherit;font-size:12px;font-weight:600;color:var(--voltage-deep);background:var(--voltage-soft);border:1px solid var(--voltage-line);border-radius:8px;padding:4px 11px;cursor:pointer;white-space:nowrap}
+.close-btn:hover{background:var(--voltage);color:var(--on-dark);border-color:var(--voltage)}
+
+/* Confirm modal (Close reason) */
+.modal-overlay{position:fixed;inset:0;background:rgba(37,40,61,.45);z-index:60}
+.modal-card{position:fixed;z-index:61;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,92vw);background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 18px 50px rgba(37,40,61,.3);padding:22px 24px}
+.modal-card h3{margin:0 0 2px;font-size:18px}
+.modal-sub{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+.reason-label{font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
+.reason-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.reason-chip{font:inherit;font-size:13px;font-weight:600;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 14px;cursor:pointer}
+.reason-chip:hover{border-color:var(--voltage)}
+.reason-chip.on{background:var(--voltage);color:var(--on-dark);border-color:var(--voltage)}
+.reason-text{width:100%;margin-bottom:14px}
+.modal-actions{display:flex;align-items:center;gap:14px}
+.btn-close-confirm{font:inherit;font-size:14px;font-weight:650;color:var(--on-dark);background:var(--voltage);border:1px solid var(--voltage);border-radius:10px;padding:9px 18px;cursor:pointer}
+.btn-close-confirm:hover{background:var(--voltage-deep)}
+.btn-close-confirm:disabled{opacity:.5;cursor:default}
+
+/* Settings form */
+.settings-section{margin-bottom:28px}
+.settings-section .eyebrow{margin:0 0 12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);flex-wrap:wrap}
+.seg button{font:inherit;font-size:13.5px;font-weight:600;color:var(--muted);background:none;border:none;padding:9px 16px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:none}
+.seg button.on{background:var(--steel);color:var(--on-dark)}
+.preset-note{font-size:12.5px;color:var(--muted);margin-top:8px;max-width:620px}
+.comp-dial{display:grid;grid-template-columns:132px 1fr 104px;align-items:center;gap:14px;margin-bottom:14px;max-width:580px}
+.comp-dial>label{font-size:14px;color:var(--ink)}
+.comp-dial input[type=range]{width:100%;accent-color:var(--voltage)}
+.comp-dial input[type=number]{text-align:right}
+.lane{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:var(--surface)}
+.lane-head{display:flex;align-items:center;gap:12px}
+.lane-name{font-weight:650;font-size:15px;color:var(--ink);flex:1}
+.switch{position:relative;display:inline-block;width:40px;height:22px;flex:0 0 auto;cursor:pointer}
+.switch input{opacity:0;width:0;height:0;position:absolute}
+.switch-track{position:absolute;inset:0;background:var(--line);border-radius:999px;transition:background .15s}
+.switch-track::before{content:"";position:absolute;left:2px;top:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform .15s}
+.switch input:checked+.switch-track{background:var(--voltage)}
+.switch input:checked+.switch-track::before{transform:translateX(18px)}
+.lane-reminder{font-size:12.5px;color:var(--voltage-deep);background:var(--voltage-soft);border:1px solid var(--voltage-line);border-radius:8px;padding:8px 11px;margin-top:10px}
+.lane-vocab{margin-top:10px}
+.lane-vocab textarea{width:100%;min-height:70px;line-height:1.4;resize:vertical}
+.filter-row{display:grid;grid-template-columns:132px 1fr;align-items:center;gap:14px;margin-bottom:12px;max-width:580px}
+.filter-row>label{font-size:14px;color:var(--ink)}
+.filter-row input,.filter-row select{width:100%}
+.nudge{border-radius:10px;padding:11px 14px;margin-bottom:10px;font-size:13.5px;border:1px solid}
+.nudge--warn{background:var(--voltage-soft);border-color:var(--voltage-line);color:var(--ink)}
+.nudge--alert{background:var(--flag-soft);border-color:#E9C9C2;color:var(--ink)}
+.settings-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:8px}
+.settings-changelog{font-family:ui-monospace,monospace;font-size:11.5px;color:var(--muted);white-space:pre-wrap;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:14px;max-height:150px;overflow:auto}

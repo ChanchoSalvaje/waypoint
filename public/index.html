@@ -17,7 +17,10 @@
     <svg class="brand-mark" viewBox="0 0 100 100" width="30" height="30" aria-hidden="true"><path d="M50 16 L57.8 42.2 L84 50 L57.8 57.8 L50 84 L42.2 57.8 L16 50 L42.2 42.2 Z" fill="#B85C38"/><circle cx="50" cy="50" r="3.5" fill="#F3EEE4"/></svg>
     <div><div class="name">Waypoint</div><div class="sub">Command Center</div></div>
   </div>
-  <button type="button" class="top-btn" onclick="showComp()">Comp &rsaquo;</button>
+  <div class="top-actions">
+    <button type="button" class="top-btn" onclick="showComp()">Comp &rsaquo;</button>
+    <button type="button" class="top-btn" onclick="showSettings()">Settings &rsaquo;</button>
+  </div>
 </header>
 
 <!-- ===================== DASHBOARD VIEW ===================== -->
@@ -85,6 +88,18 @@
 
   <div class="comp-caveat">Estimates for planning &mdash; not tax or financial advice. Confirm specifics with a professional.</div>
 </div>
+
+<!-- ===================== SETTINGS VIEW (admin) ===================== -->
+<div id="view-settings" class="page hidden">
+  <button class="back" onclick="settingsBack()">&lsaquo; Back to pipeline</button>
+  <h1>Settings</h1>
+  <div class="sub">Tune the mine &mdash; posture, comp gates, lanes, and hard filters. Saved to your Settings record.</div>
+  <div class="rule"></div>
+  <div id="settings-body"><div class="empty">Loading settings&hellip;</div></div>
+</div>
+
+<!-- modal root (Close confirm popover) -->
+<div id="modal-root"></div>
 
 <script>
 /* ============================================================
@@ -170,6 +185,7 @@ function renderDashboard(){
       '<div class="meta"><span title="'+esc(j.comp||"")+'">'+esc(j.comp||"—")+'</span><span title="'+esc(j.workMode||"")+'">'+esc(j.workMode||"")+'</span></div>'+
       '<div class="right">'+
         pursueToggle(j,"row")+
+        closeButton(j,"row")+
         (j.fit?'<span class="fit"><span class="dot"></span>'+j.fit+'/5</span>':'')+
         stageBadge(j)+
         linkIcon(j)+
@@ -434,6 +450,9 @@ function statusActivity(j){
     '<label class="fld">Pursue</label>'+
     '<div class="edit-actions">'+pursueToggle(j,"card")+pursueHint(j)+'<span class="edit-status" id="pursue-status"></span></div>'+
     '<div class="edit-divider"></div>'+
+    '<label class="fld">Close</label>'+
+    '<div class="edit-actions">'+(j.stage==="Closed"?'<span class="edit-status">This opportunity is closed.</span>':closeButton(j,"card"))+'</div>'+
+    '<div class="edit-divider"></div>'+
     '<label class="fld">Activity log</label>'+
     (j.notes?'<p class="body">'+esc(j.notes)+'</p>':'<div class="empty">No notes yet.</div>')+
     '<label class="fld" for="edit-note" style="margin-top:16px">Add a dated note</label>'+
@@ -513,6 +532,8 @@ async function addNote(id){
 function showView(v){
   document.getElementById("view-dashboard").classList.toggle("hidden",v!=="dashboard");
   document.getElementById("view-detail").classList.toggle("hidden",v!=="detail");
+  document.getElementById("view-comp").classList.add("hidden");
+  document.getElementById("view-settings").classList.add("hidden");
 }
 function showDashboard(){ showView("dashboard"); window.scrollTo(0,0); }
 
@@ -533,6 +554,7 @@ function compRef(n){ n=Math.round(n); return (n%1000===0)?("$"+(n/1000)+"K"):com
 function showComp(){
   document.getElementById("view-dashboard").classList.add("hidden");
   document.getElementById("view-detail").classList.add("hidden");
+  document.getElementById("view-settings").classList.add("hidden");
   document.getElementById("view-comp").classList.remove("hidden");
   window.scrollTo(0,0);
 }
@@ -576,6 +598,209 @@ function compute1099(){
   var naive=Math.round(target/2080);
   document.getElementById("c_naive").textContent=
     "Straight "+compMoney(target)+" ÷ 2,080 hrs = ~ $"+naive.toLocaleString("en-US")+"/hr";
+}
+
+/* ============================================================
+   SLICE 4 — Close action (direct write via update-job closeReason).
+   Closing needs no research, so it's a direct write — not a queued flag.
+   ============================================================ */
+function closeButton(j, place){
+  if(j.stage==="Closed") return "";
+  return '<button type="button" class="close-btn" title="Close this opportunity" onclick="event.stopPropagation();openCloseDialog(\''+j.id+'\')">Close</button>';
+}
+var CLOSE_REASONS=["Location","Lane mismatch","Comp","Not interested"];
+var SELECTED_REASON="";
+function openCloseDialog(id){
+  var j=getJobs().filter(function(x){return x.id===id;})[0]; if(!j) return;
+  SELECTED_REASON="";
+  var chips=CLOSE_REASONS.map(function(r){return '<button type="button" class="reason-chip" onclick="pickReason(this,\''+esc(r)+'\')">'+esc(r)+'</button>';}).join("");
+  document.getElementById("modal-root").innerHTML=
+    '<div class="modal-overlay" onclick="closeDialogCancel()"></div>'+
+    '<div class="modal-card" role="dialog" aria-modal="true" aria-label="Close opportunity">'+
+      '<h3>Close &ldquo;'+esc(j.company)+'&rdquo;?</h3>'+
+      '<div class="modal-sub">'+esc(j.role)+'</div>'+
+      '<div class="reason-label">Reason (required)</div>'+
+      '<div class="reason-chips">'+chips+'</div>'+
+      '<input type="text" id="close-reason-text" class="reason-text" placeholder="…or type a reason" oninput="onReasonText()">'+
+      '<div class="modal-actions">'+
+        '<button type="button" class="btn-close-confirm" id="close-confirm" disabled onclick="confirmClose(\''+j.id+'\')">Close opportunity</button>'+
+        '<button type="button" class="link-btn" onclick="closeDialogCancel()">Cancel</button>'+
+        '<span class="edit-status" id="close-status"></span>'+
+      '</div>'+
+      '<div class="readonly-note">Sets Stage → Closed, clears the next action, appends a dated note. Not a rejection · stays visible · nothing deleted.</div>'+
+    '</div>';
+}
+function pickReason(btn,r){
+  SELECTED_REASON=r;
+  document.querySelectorAll(".reason-chip").forEach(function(c){c.classList.remove("on");});
+  btn.classList.add("on");
+  var t=document.getElementById("close-reason-text"); if(t) t.value="";
+  updateCloseConfirm();
+}
+function onReasonText(){
+  var t=document.getElementById("close-reason-text");
+  if(t && t.value.trim()){ SELECTED_REASON=""; document.querySelectorAll(".reason-chip").forEach(function(c){c.classList.remove("on");}); }
+  updateCloseConfirm();
+}
+function currentReason(){ var t=document.getElementById("close-reason-text"); var typed=t?t.value.trim():""; return typed||SELECTED_REASON||""; }
+function updateCloseConfirm(){ var b=document.getElementById("close-confirm"); if(b) b.disabled=!currentReason(); }
+function closeDialogCancel(){ SELECTED_REASON=""; document.getElementById("modal-root").innerHTML=""; }
+async function confirmClose(id){
+  var reason=currentReason(); if(!reason) return;
+  var b=document.getElementById("close-confirm"); if(b) b.disabled=true;
+  flashStatus("close-status","Closing…","");
+  try{
+    var data=await postUpdate({id:id, closeReason:reason});
+    var job=getJobs().filter(function(x){return x.id===id;})[0];
+    if(job){ job.stage=data.stage; job.pursue=!!data.pursue; job.nextAction=data.nextAction||""; job.nextActionDate=""; job.notes=data.notes; }
+    closeDialogCancel();
+    renderDashboard();
+    var dv=document.getElementById("view-detail");
+    if(dv && !dv.classList.contains("hidden") && CURRENT_DETAIL===id){ rerenderDetail(id); }
+  }catch(err){ flashStatus("close-status","Couldn't close: "+err.message,"err"); if(b) b.disabled=false; }
+}
+
+/* ============================================================
+   SLICE 4 — Settings (admin) tab. GET/PUT via /.netlify/functions/settings.
+   ============================================================ */
+var SETTINGS_STATE=null, SETTINGS_LOADED=null, SETTINGS_SAVING=false;
+var S_PRESETS=["Reach & Pivot","Land Fast","Custom"];
+var S_BASES=["Base only","Base + guaranteed bonus","Total cash comp"];
+var S_LEVELS=["None","Manager+","Director+"];
+var S_LOCATIONS=["Remote-US or Tucson","Remote-US only"];
+
+function settingsBack(){ showView("dashboard"); window.scrollTo(0,0); }
+async function showSettings(){
+  document.getElementById("view-dashboard").classList.add("hidden");
+  document.getElementById("view-detail").classList.add("hidden");
+  document.getElementById("view-comp").classList.add("hidden");
+  document.getElementById("view-settings").classList.remove("hidden");
+  window.scrollTo(0,0);
+  document.getElementById("settings-body").innerHTML='<div class="empty">Loading settings…</div>';
+  try{
+    var resp=await fetch("/.netlify/functions/settings");
+    var data=await resp.json();
+    if(!resp.ok||(data&&data.error)) throw new Error((data&&data.error)||("HTTP "+resp.status));
+    SETTINGS_LOADED=normSettings(data.settings);
+    SETTINGS_STATE=normSettings(data.settings);
+    renderSettings();
+  }catch(err){
+    document.getElementById("settings-body").innerHTML='<div class="empty">Couldn’t load settings: '+esc(err.message)+'</div>';
+  }
+}
+function normSettings(S){
+  S=S||{}; var L=S.lanes||{}, V=S.vocab||{};
+  return {
+    preset:S.preset||"Custom",
+    gate:(S.gate==null?155000:Number(S.gate)),
+    target:(S.target==null?195000:Number(S.target)),
+    basis:S.basis||"Total cash comp",
+    level:S.level||"None",
+    lanes:{ai:!!L.ai,pmo:!!L.pmo,to:!!L.to},
+    vocab:{ai:V.ai||"",pmo:V.pmo||"",to:V.to||""},
+    exclusions:S.exclusions||"",
+    location:S.location||"Remote-US or Tucson",
+    resweep:!!S.resweep,
+    changeLog:S.changeLog||""
+  };
+}
+function lanesLit(){ var l=SETTINGS_STATE.lanes; return (l.ai?1:0)+(l.pmo?1:0)+(l.to?1:0); }
+function optList(arr,sel){ return arr.map(function(o){return '<option'+(sel===o?" selected":"")+'>'+esc(o)+'</option>';}).join(""); }
+function compDial(key,label){
+  var v=SETTINGS_STATE[key];
+  return '<div class="comp-dial"><label for="s-'+key+'-n">'+esc(label)+'</label>'+
+    '<input id="s-'+key+'-r" type="range" min="120000" max="260000" step="5000" value="'+v+'" oninput="onCompRange(\''+key+'\',this.value)">'+
+    '<input id="s-'+key+'-n" type="number" min="0" step="5000" value="'+v+'" oninput="onCompNum(\''+key+'\',this.value)"></div>';
+}
+function laneBlock(key,name){
+  var on=SETTINGS_STATE.lanes[key];
+  return '<div class="lane"><div class="lane-head">'+
+    '<label class="switch"><input type="checkbox"'+(on?" checked":"")+' onchange="onLane(\''+key+'\',this.checked)" aria-label="'+esc(name)+' lane"><span class="switch-track"></span></label>'+
+    '<span class="lane-name">'+esc(name)+'</span>'+
+    '<button type="button" class="link-btn" onclick="toggleVocab(\''+key+'\')">Vocab &#9662;</button></div>'+
+    (on?'<div class="lane-reminder">Add matching saved searches on LinkedIn / Indeed / Built In — the mine only sees what your alerts deliver.</div>':'')+
+    '<div id="vocab-'+key+'" class="lane-vocab hidden"><textarea oninput="onVocab(\''+key+'\',this.value)" placeholder="One term per line…">'+esc(SETTINGS_STATE.vocab[key])+'</textarea></div>'+
+  '</div>';
+}
+function renderSettings(){
+  var s=SETTINGS_STATE;
+  var seg=S_PRESETS.map(function(p){return '<button type="button" class="'+(s.preset===p?"on":"")+'" onclick="applyPreset(\''+p+'\')">'+esc(p)+'</button>';}).join("");
+  document.getElementById("settings-body").innerHTML=
+    '<section class="settings-section"><div class="eyebrow">Posture preset</div>'+
+      '<div class="seg">'+seg+'</div>'+
+      '<div class="preset-note">Reach &amp; Pivot: AI lane only, Director+. Land Fast: all lanes, Manager+. Presets never touch comp. Any manual lane or level change flips this to Custom.</div>'+
+      '<div class="filter-row" style="margin-top:14px"><label for="s-level">Level floor</label><select id="s-level" onchange="onLevel(this.value)">'+optList(S_LEVELS,s.level)+'</select></div>'+
+    '</section>'+
+    '<section class="settings-section"><div class="eyebrow">Comp dials</div>'+
+      compDial("gate","Comp gate")+compDial("target","Comp target")+
+      '<div class="filter-row"><label for="s-basis">Comp basis</label><select id="s-basis" onchange="onBasis(this.value)">'+optList(S_BASES,s.basis)+'</select></div>'+
+    '</section>'+
+    '<section class="settings-section"><div class="eyebrow">Lanes</div>'+
+      laneBlock("ai","AI Enablement")+laneBlock("pmo","PMO & Portfolio")+laneBlock("to","Transformation Office")+
+    '</section>'+
+    '<section class="settings-section"><div class="eyebrow">Hard filters</div>'+
+      '<div class="filter-row"><label for="s-loc">Location mode</label><select id="s-loc" onchange="onLocation(this.value)">'+optList(S_LOCATIONS,s.location)+'</select></div>'+
+      '<div class="filter-row"><label for="s-excl">Industry exclusions</label><input id="s-excl" type="text" value="'+esc(s.exclusions)+'" oninput="onExclusions(this.value)" placeholder="e.g. defense, gambling"></div>'+
+    '</section>'+
+    '<section class="settings-section"><div class="eyebrow">Mismatch nudges</div><div id="settings-nudges"></div></section>'+
+    '<section class="settings-section"><div class="eyebrow">Re-sweep</div>'+
+      '<div class="settings-actions"><button type="button" class="btn-ghost" id="resweep-btn" onclick="onResweep()">Re-evaluate closed rows against current settings</button><span class="edit-status" id="resweep-status"></span></div>'+
+    '</section>'+
+    '<div class="rule"></div>'+
+    '<div class="settings-actions"><button type="button" class="btn-green" id="settings-save" onclick="onSaveSettings()">Save settings</button><span class="edit-status" id="settings-status"></span></div>'+
+    (s.changeLog?'<div class="settings-changelog">'+esc(s.changeLog)+'</div>':'');
+  updateNudges();
+}
+function onCompRange(key,val){ var n=Number(val); SETTINGS_STATE[key]=n; var el=document.getElementById("s-"+key+"-n"); if(el) el.value=n; updateNudges(); }
+function onCompNum(key,val){ if(val===""){ updateNudges(); return; } var n=Number(val); if(isFinite(n)){ SETTINGS_STATE[key]=n; var el=document.getElementById("s-"+key+"-r"); if(el) el.value=n; } updateNudges(); }
+function onBasis(v){ SETTINGS_STATE.basis=v; }
+function onLocation(v){ SETTINGS_STATE.location=v; }
+function onExclusions(v){ SETTINGS_STATE.exclusions=v; }
+function onVocab(key,v){ SETTINGS_STATE.vocab[key]=v; }
+function toggleVocab(key){ var el=document.getElementById("vocab-"+key); if(el) el.classList.toggle("hidden"); }
+function applyPreset(name){
+  SETTINGS_STATE.preset=name;
+  if(name==="Reach & Pivot"){ SETTINGS_STATE.lanes={ai:true,pmo:false,to:false}; SETTINGS_STATE.level="Director+"; }
+  else if(name==="Land Fast"){ SETTINGS_STATE.lanes={ai:true,pmo:true,to:true}; SETTINGS_STATE.level="Manager+"; }
+  // Custom leaves lanes/level as-is. Comp is NEVER touched by a preset.
+  renderSettings();
+}
+function onLane(key,val){ SETTINGS_STATE.lanes[key]=val; SETTINGS_STATE.preset="Custom"; renderSettings(); }
+function onLevel(v){ SETTINGS_STATE.level=v; SETTINGS_STATE.preset="Custom"; renderSettings(); }
+function updateNudges(){
+  var s=SETTINGS_STATE, n=[], lit=lanesLit(), gate=Number(s.gate)||0, target=Number(s.target)||0;
+  if((s.preset==="Land Fast"||lit>=2) && gate>180000){ n.push('<div class="nudge nudge--warn">Broad posture with a high gate — most PMO/Transformation roles will fall below $'+Math.round(gate/1000)+'K. Adjust?</div>'); }
+  if(lit===0){ n.push('<div class="nudge nudge--alert">No lanes are lit — the mine will keep nothing.</div>'); }
+  if(gate>target){ n.push('<div class="nudge nudge--alert">Your gate exceeds your target — inputs likely swapped.</div>'); }
+  var el=document.getElementById("settings-nudges"); if(el) el.innerHTML=n.length?n.join(""):'<div class="empty" style="padding:2px 0">No mismatches — looks coherent.</div>';
+}
+async function putSettings(payload){
+  var resp=await fetch("/.netlify/functions/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+  var data=await resp.json();
+  if(!resp.ok||(data&&data.error)) throw new Error((data&&data.error)||("HTTP "+resp.status));
+  return data;
+}
+async function onResweep(){
+  flashStatus("resweep-status","Queuing…","");
+  try{
+    await putSettings({resweep:true});
+    SETTINGS_STATE.resweep=true; if(SETTINGS_LOADED) SETTINGS_LOADED.resweep=true;
+    flashStatus("resweep-status","Queued for the next mine run.","ok");
+  }catch(err){ flashStatus("resweep-status","Couldn't queue: "+err.message,"err"); }
+}
+async function onSaveSettings(){
+  if(SETTINGS_SAVING) return; SETTINGS_SAVING=true;
+  var btn=document.getElementById("settings-save"); if(btn) btn.disabled=true;
+  flashStatus("settings-status","Saving…","");
+  try{
+    var s=SETTINGS_STATE;
+    var data=await putSettings({preset:s.preset,gate:s.gate,target:s.target,basis:s.basis,level:s.level,lanes:s.lanes,vocab:s.vocab,exclusions:s.exclusions,location:s.location});
+    SETTINGS_LOADED=normSettings(data.settings);
+    SETTINGS_STATE=normSettings(data.settings);
+    renderSettings();
+    flashStatus("settings-status", data.changed?("Saved ✓ — "+(data.changeLine||"")):"No changes to save.", "ok");
+  }catch(err){ flashStatus("settings-status","Couldn't save: "+err.message,"err"); }
+  finally{ SETTINGS_SAVING=false; var b=document.getElementById("settings-save"); if(b) b.disabled=false; }
 }
 
 loadJobs();

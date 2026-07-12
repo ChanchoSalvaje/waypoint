@@ -10,6 +10,10 @@
 //   • Notes       (text) — APPEND-ONLY: a new dated line is added; existing
 //                  Notes content is read first and never overwritten or deleted.
 //
+// CLOSE: passing `closeReason` performs an atomic close — Stage→Closed, Pursue→false,
+// Next Action + Next Action By cleared, and an append-only dated Notes line
+// "[YYYY-MM-DD]: Closed by Tim via Waypoint — <reason>. Not a rejection." No delete.
+//
 // SECURITY: this is a write endpoint. The whole site — including this function —
 // sits behind HTTP Basic Auth enforced by netlify/edge-functions/auth.js (path
 // "/*"), so it is already password-gated in production. Keep it that way: never
@@ -37,6 +41,7 @@ const NEXT_ACTION_FIELD = "fldQjbPglCq07XJJD"; // Next Action (multilineText)
 const NOTES_FIELD = "fldXN9uz1ZcIFtsKm";       // Notes (multilineText)
 const EXCITEMENT_FIELD = "fldOzdAtFpCpi2GVU";  // Excitement (number, integer 1–5)
 const PURSUE_FIELD = "fldk41nshQmCXHanE";      // Pursue (checkbox / boolean)
+const NEXT_ACTION_BY_FIELD = "fld3pSuhVDc8gW4cU"; // Next Action By (date) — cleared on Close
 
 // Exact live option names for Stage (confirmed against the schema).
 const ALLOWED_STAGES = [
@@ -57,6 +62,8 @@ function phoenixStamp() {
   for (const { type, value } of parts) p[type] = value;
   return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute} MST`;
 }
+// "YYYY-MM-DD" in Arizona time (date only) — used for the Close note stamp.
+function phoenixDate() { return phoenixStamp().slice(0, 10); }
 
 exports.handler = async function (event) {
   if (event.httpMethod !== "POST") {
@@ -117,26 +124,42 @@ exports.handler = async function (event) {
     fields[PURSUE_FIELD] = body.pursue;
   }
 
-  // Notes are append-only. Validate the new text here; the actual read+append
-  // happens below (it needs an await).
-  let noteText = null;
+  // Notes are append-only. Whatever we append is computed here as `appendEntry`
+  // (a single pre-formatted line); the read+append happens below (needs await).
+  let appendEntry = null;
   if (body.noteAppend !== undefined) {
     if (typeof body.noteAppend !== "string" || body.noteAppend.trim() === "") {
       return json(400, { error: "Note text is required to append a note." });
     }
-    noteText = body.noteAppend.trim();
+    const noteText = body.noteAppend.trim();
     if (noteText.length > 5000) {
       return json(400, { error: "Note is too long (max 5000 chars)." });
     }
+    appendEntry = `${phoenixStamp()}: ${noteText}`;
   }
 
-  if (Object.keys(fields).length === 0 && noteText === null) {
-    return json(400, { error: "Nothing to update — provide stage, nextAction, excitement, pursue, and/or noteAppend." });
+  // Close action (one atomic call): Stage→Closed, Pursue→false, Next Action + Next
+  // Action By cleared, and an append-only dated Notes line. Closing is a direct write
+  // (no research needed) — it never deletes; the closed row stays as dedupe memory.
+  if (body.closeReason !== undefined) {
+    if (typeof body.closeReason !== "string" || body.closeReason.trim() === "") {
+      return json(400, { error: "A close reason is required." });
+    }
+    const reason = body.closeReason.trim().slice(0, 300);
+    fields[STAGE_FIELD] = "Closed";
+    fields[PURSUE_FIELD] = false;
+    fields[NEXT_ACTION_FIELD] = "";
+    fields[NEXT_ACTION_BY_FIELD] = null;
+    appendEntry = `[${phoenixDate()}]: Closed by Tim via Waypoint — ${reason}. Not a rejection.`;
+  }
+
+  if (Object.keys(fields).length === 0 && appendEntry === null) {
+    return json(400, { error: "Nothing to update — provide stage, nextAction, excitement, pursue, noteAppend, and/or closeReason." });
   }
 
   try {
     // APPEND-ONLY: read the current Notes FIRST, then add the dated line below it.
-    if (noteText !== null) {
+    if (appendEntry !== null) {
       const getUrl =
         `https://api.airtable.com/v0/${BASE_ID}/${TABLE_ID}/${id}?returnFieldsByFieldId=true`;
       const getResp = await fetch(getUrl, { headers: { Authorization: `Bearer ${token}` } });
@@ -149,8 +172,7 @@ exports.handler = async function (event) {
       }
       const cur = await getResp.json();
       const existing = (cur.fields && cur.fields[NOTES_FIELD]) || "";
-      const entry = `${phoenixStamp()}: ${noteText}`;
-      fields[NOTES_FIELD] = existing ? `${existing}\n${entry}` : entry;
+      fields[NOTES_FIELD] = existing ? `${existing}\n${appendEntry}` : appendEntry;
     }
 
     const url = `https://api.airtable.com/v0/${BASE_ID}/${TABLE_ID}/${id}`;
