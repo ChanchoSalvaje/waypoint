@@ -18,6 +18,7 @@
     <div><div class="name">Waypoint</div><div class="sub">Command Center</div></div>
   </div>
   <div class="top-actions">
+    <button type="button" class="top-btn" onclick="showSignals()">Signals &rsaquo;</button>
     <button type="button" class="top-btn" onclick="showComp()">Comp &rsaquo;</button>
     <button type="button" class="top-btn" onclick="showSettings()">Settings &rsaquo;</button>
   </div>
@@ -96,6 +97,16 @@
   <div class="sub">Tune the mine &mdash; posture, comp gates, lanes, and hard filters. Saved to your Settings record.</div>
   <div class="rule"></div>
   <div id="settings-body"><div class="empty">Loading settings&hellip;</div></div>
+</div>
+
+<!-- ===================== SIGNALS VIEW (board) ===================== -->
+<div id="view-signals" class="page hidden">
+  <button class="back" onclick="signalsBack()">&lsaquo; Back to pipeline</button>
+  <h1>Signals</h1>
+  <div class="sub">Pre-posting triggers &mdash; AI exec hires, CoE launches, public commitments. Triage and stage; pitching stays a Council step.</div>
+  <div class="rule"></div>
+  <div id="signals-body"><div class="empty">Loading signals&hellip;</div></div>
+  <div id="sig-toast" class="sig-toast hidden"></div>
 </div>
 
 <!-- modal root (Close confirm popover) -->
@@ -540,6 +551,7 @@ function showView(v){
   document.getElementById("view-detail").classList.toggle("hidden",v!=="detail");
   document.getElementById("view-comp").classList.add("hidden");
   document.getElementById("view-settings").classList.add("hidden");
+  document.getElementById("view-signals").classList.add("hidden");
 }
 function showDashboard(){ showView("dashboard"); window.scrollTo(0,0); }
 
@@ -561,6 +573,7 @@ function showComp(){
   document.getElementById("view-dashboard").classList.add("hidden");
   document.getElementById("view-detail").classList.add("hidden");
   document.getElementById("view-settings").classList.add("hidden");
+  document.getElementById("view-signals").classList.add("hidden");
   document.getElementById("view-comp").classList.remove("hidden");
   window.scrollTo(0,0);
 }
@@ -721,6 +734,7 @@ async function showSettings(){
   document.getElementById("view-dashboard").classList.add("hidden");
   document.getElementById("view-detail").classList.add("hidden");
   document.getElementById("view-comp").classList.add("hidden");
+  document.getElementById("view-signals").classList.add("hidden");
   document.getElementById("view-settings").classList.remove("hidden");
   window.scrollTo(0,0);
   document.getElementById("settings-body").innerHTML='<div class="empty">Loading settings…</div>';
@@ -848,6 +862,184 @@ async function onSaveSettings(){
     flashStatus("settings-status", data.changed?("Saved ✓ — "+(data.changeLine||"")):"No changes to save.", "ok");
   }catch(err){ flashStatus("settings-status","Couldn't save: "+err.message,"err"); }
   finally{ SETTINGS_SAVING=false; var b=document.getElementById("settings-save"); if(b) b.disabled=false; }
+}
+
+/* ============================================================
+   SIGNALS BOARD — GET/POST via /.netlify/functions/signals.
+   Status-grouped triage board (New → Reviewing → Pitched → Dismissed).
+   Writes only Status + an append-only dated Notes line; content fields
+   are never edited here. Pitching stays a Council/skill step.
+   ============================================================ */
+var SIGNALS=[];
+var SIG_GROUPS=["New","Reviewing","Pitched","Dismissed"];
+var SIG_TYPE_CLASS={
+  "AI Executive Hire":"sig-exec",
+  "AI Initiative / CoE Launch":"sig-coe",
+  "Public AI Commitment":"sig-commit",
+  "Restructure + AI Hiring":"sig-restructure",
+  "Other":"sig-other"
+};
+
+function signalsBack(){ showView("dashboard"); window.scrollTo(0,0); }
+async function showSignals(){
+  document.getElementById("view-dashboard").classList.add("hidden");
+  document.getElementById("view-detail").classList.add("hidden");
+  document.getElementById("view-comp").classList.add("hidden");
+  document.getElementById("view-settings").classList.add("hidden");
+  document.getElementById("view-signals").classList.remove("hidden");
+  window.scrollTo(0,0);
+  document.getElementById("signals-body").innerHTML='<div class="empty">Loading signals…</div>';
+  try{
+    var resp=await fetch("/.netlify/functions/signals");
+    var data=await resp.json();
+    if(!resp.ok||(data&&data.error)) throw new Error((data&&data.error)||("HTTP "+resp.status));
+    SIGNALS=(data&&data.signals)||[];
+    renderSignals();
+  }catch(err){
+    document.getElementById("signals-body").innerHTML='<div class="empty">Couldn’t load signals: '+esc(err.message)+'</div>';
+  }
+}
+
+/* ---- date helpers (display-only; browser-local is fine for chips/staleness) ---- */
+function sigIsoToday(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function sigDaysBetween(a,b){ return Math.round((new Date(b+"T00:00:00")-new Date(a+"T00:00:00"))/86400000); }
+function sigNoteLines(notes){ return (notes||"").split("\n").map(function(l){return l.trim();}).filter(Boolean); }
+function sigLastNote(notes){ var L=sigNoteLines(notes); return L.length?L[L.length-1]:""; }
+function sigDatesInNotes(notes){
+  var out=[]; sigNoteLines(notes).forEach(function(l){ var m=l.match(/^\[?(\d{4}-\d{2}-\d{2})\]?\s*:/); if(m) out.push(m[1]); });
+  return out;
+}
+function sigMaxIso(arr){ return arr.filter(Boolean).slice().sort().slice(-1)[0]||""; }
+/* Reviewing card with no activity in 7+ days = silt. (Anti-silt rule.) */
+function sigIsStale(s){
+  if(s.status!=="Reviewing") return false;
+  var latest=sigMaxIso([s.date].concat(sigDatesInNotes(s.notes)));
+  return latest ? sigDaysBetween(latest, sigIsoToday())>7 : false;
+}
+/* Cheapest possible future-date parse from the Notes (e.g. "~7/27" or "2026-07-27"). */
+function sigFutureDate(notes){
+  var text=notes||"", today=sigIsoToday(), cands=[], m;
+  var re1=/(\d{4})-(\d{2})-(\d{2})/g;
+  while((m=re1.exec(text))){ cands.push(m[1]+"-"+m[2]+"-"+m[3]); }
+  var yr=new Date().getFullYear(), re2=/(?:^|[^\d])(\d{1,2})\/(\d{1,2})(?![\d\/])/g;
+  while((m=re2.exec(text))){
+    var mo=Number(m[1]), da=Number(m[2]);
+    if(mo>=1&&mo<=12&&da>=1&&da<=31) cands.push(yr+"-"+String(mo).padStart(2,"0")+"-"+String(da).padStart(2,"0"));
+  }
+  var future=cands.filter(function(d){return d>=today;}).sort();
+  return future.length?future[0]:"";
+}
+function sigFmtDate(iso){ return iso?new Date(iso+"T00:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric"}):""; }
+
+function renderSignals(){
+  var groups={}; SIG_GROUPS.forEach(function(s){groups[s]=[];});
+  SIGNALS.forEach(function(s){ (groups[s.status]||(groups[s.status]=[])).push(s); });
+  var html='<div class="sig-board">';
+  SIG_GROUPS.forEach(function(status){
+    var rows=(groups[status]||[]).slice().sort(function(a,b){return (b.date||"").localeCompare(a.date||"");});
+    html+='<div class="sig-col sig-col-'+status.toLowerCase()+'">'+
+      '<div class="sig-col-head"><span class="sig-col-name">'+status+'</span><span class="sig-col-count">'+rows.length+'</span></div>'+
+      '<div class="sig-col-body">'+
+        (rows.length?rows.map(signalCard).join(""):'<div class="sig-empty">Nothing here.</div>')+
+      '</div></div>';
+  });
+  document.getElementById("signals-body").innerHTML=html+'</div>';
+}
+function sigActionLabel(t){ return t==="Dismissed"?"Dismiss":("&rarr; "+esc(t)); }
+function signalCard(s){
+  var typeClass=SIG_TYPE_CLASS[s.type]||"sig-other";
+  var who=(s.angle||"").split("\n")[0].trim();
+  var last=sigLastNote(s.notes);
+  var stale=sigIsStale(s);
+  var fut=sigFutureDate(s.notes);
+  var actions=SIG_GROUPS.filter(function(t){return t!==s.status;}).map(function(t){
+    return '<button type="button" class="sig-act'+(t==="Dismissed"?" sig-act--dismiss":"")+'" onclick="onSignalAction(\''+s.id+'\',\''+t+'\')">'+sigActionLabel(t)+'</button>';
+  }).join("");
+  return '<div class="sig-card'+(stale?' sig-card--stale':'')+'">'+
+    '<div class="sig-card-top">'+
+      '<span class="sig-type '+typeClass+'">'+esc(s.type||"Signal")+'</span>'+
+      (s.date?'<span class="sig-date">'+esc(sigFmtDate(s.date))+'</span>':'')+
+    '</div>'+
+    '<div class="sig-title">'+esc(s.signal)+'</div>'+
+    (s.company?'<div class="sig-co">'+esc(s.company)+'</div>':'')+
+    ((fut||stale)?'<div class="sig-flags">'+
+      (fut?'<span class="sig-chip">&#9203; '+esc(sigFmtDate(fut))+'</span>':'')+
+      (stale?'<span class="sig-stale">Stale &mdash; act or dismiss</span>':'')+
+    '</div>':'')+
+    (who?'<div class="sig-who">'+esc(who)+'</div>':'')+
+    (last?'<div class="sig-note"><span class="sig-note-lbl">Latest</span> '+esc(last)+'</div>':'')+
+    signalExpand(s)+
+    '<div class="sig-actions">'+actions+'</div>'+
+  '</div>';
+}
+function signalExpand(s){
+  var url=safeUrl(s.sourceUrl);
+  var body=
+    (s.summary?'<div class="sig-sec"><span class="sig-sec-lbl">Summary</span><p>'+esc(s.summary)+'</p></div>':'')+
+    (s.angle?'<div class="sig-sec"><span class="sig-sec-lbl">Suggested angle</span><p>'+esc(s.angle)+'</p></div>':'')+
+    (s.notes?'<div class="sig-sec"><span class="sig-sec-lbl">Notes</span><p>'+esc(s.notes)+'</p></div>':'')+
+    (url?'<a class="posting-btn sig-src" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">Open source <span aria-hidden="true">&rarr;</span></a>':'');
+  if(!body) return '';
+  return '<details class="sig-more"><summary>Details</summary><div class="sig-more-body">'+body+'</div></details>';
+}
+
+function sigToast(msg,cls){
+  var t=document.getElementById("sig-toast"); if(!t) return;
+  t.className="sig-toast "+(cls||""); t.textContent=msg; t.classList.remove("hidden");
+  clearTimeout(sigToast._t); sigToast._t=setTimeout(function(){ t.classList.add("hidden"); },2600);
+}
+async function changeSignalStatus(id,status,reason){
+  var payload={id:id,status:status}; if(reason) payload.reason=reason;
+  var resp=await fetch("/.netlify/functions/signals",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+  var data=await resp.json();
+  if(!resp.ok||(data&&data.error)) throw new Error((data&&data.error)||("HTTP "+resp.status));
+  for(var k=0;k<SIGNALS.length;k++){ if(SIGNALS[k].id===id){ SIGNALS[k]=data.signal; break; } }
+  renderSignals();
+  return data.signal;
+}
+async function onSignalAction(id,status){
+  if(status==="Dismissed"){ openDismissDialog(id); return; }
+  try{ await changeSignalStatus(id,status,null); sigToast("Moved to "+status+" ✓","ok"); }
+  catch(err){ sigToast("Couldn’t update: "+err.message,"err"); }
+}
+
+/* Dismiss requires a one-line reason (mirrors the Close action). */
+var SIG_DISMISS_REASONS=["Not a fit","Already actioned","Too early / no angle","Duplicate"];
+var SIG_SELECTED_REASON="";
+function openDismissDialog(id){
+  var s=SIGNALS.filter(function(x){return x.id===id;})[0]; if(!s) return;
+  SIG_SELECTED_REASON="";
+  var chips=SIG_DISMISS_REASONS.map(function(r){return '<button type="button" class="reason-chip" onclick="pickSigReason(this,\''+esc(r)+'\')">'+esc(r)+'</button>';}).join("");
+  document.getElementById("modal-root").innerHTML=
+    '<div class="modal-overlay" onclick="dismissCancel()"></div>'+
+    '<div class="modal-card" role="dialog" aria-modal="true" aria-label="Dismiss signal">'+
+      '<h3>Dismiss &ldquo;'+esc(s.company||s.signal)+'&rdquo;?</h3>'+
+      '<div class="modal-sub">'+esc(s.signal)+'</div>'+
+      '<div class="reason-label">Reason (required)</div>'+
+      '<div class="reason-chips">'+chips+'</div>'+
+      '<input type="text" id="sig-reason-text" class="reason-text" placeholder="…or type a reason" oninput="onSigReasonText()">'+
+      '<div class="modal-actions">'+
+        '<button type="button" class="btn-close-confirm" id="sig-dismiss-confirm" disabled onclick="confirmDismiss(\''+s.id+'\')">Dismiss signal</button>'+
+        '<button type="button" class="link-btn" onclick="dismissCancel()">Cancel</button>'+
+        '<span class="edit-status" id="sig-dismiss-status"></span>'+
+      '</div>'+
+      '<div class="readonly-note">Sets Status → Dismissed and appends a dated Notes line. Nothing is deleted — move it back anytime.</div>'+
+    '</div>';
+}
+function pickSigReason(btn,r){ SIG_SELECTED_REASON=r; document.querySelectorAll("#modal-root .reason-chip").forEach(function(c){c.classList.remove("on");}); btn.classList.add("on"); var t=document.getElementById("sig-reason-text"); if(t) t.value=""; updateSigDismiss(); }
+function onSigReasonText(){ var t=document.getElementById("sig-reason-text"); if(t&&t.value.trim()){ SIG_SELECTED_REASON=""; document.querySelectorAll("#modal-root .reason-chip").forEach(function(c){c.classList.remove("on");}); } updateSigDismiss(); }
+function sigCurrentReason(){ var t=document.getElementById("sig-reason-text"); var typed=t?t.value.trim():""; return typed||SIG_SELECTED_REASON||""; }
+function updateSigDismiss(){ var b=document.getElementById("sig-dismiss-confirm"); if(b) b.disabled=!sigCurrentReason(); }
+function dismissCancel(){ SIG_SELECTED_REASON=""; document.getElementById("modal-root").innerHTML=""; }
+async function confirmDismiss(id){
+  var reason=sigCurrentReason(); if(!reason) return;
+  var b=document.getElementById("sig-dismiss-confirm"); if(b) b.disabled=true;
+  flashStatus("sig-dismiss-status","Dismissing…","");
+  try{
+    await changeSignalStatus(id,"Dismissed",reason);
+    document.getElementById("modal-root").innerHTML="";
+    sigToast("Dismissed ✓","ok");
+  }catch(err){ flashStatus("sig-dismiss-status","Couldn’t dismiss: "+err.message,"err"); if(b) b.disabled=false; }
 }
 
 loadJobs();
