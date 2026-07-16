@@ -13,7 +13,7 @@
 
 const BASE_ID = "appUQQ4gnT7UuFOOm";
 const TABLE_ID = "tbl4RoBe4zpDora2R";
-const RECORD_ID = "rec8AOV2LggO8KTMe"; // the single "Active" settings record
+const RECORD_ID = "recpVte7eqKLrAUGL"; // the single "Active" settings record
 
 const F = {
   preset:     "fldypEil8ct1HgitB", // Posture Preset (singleSelect)
