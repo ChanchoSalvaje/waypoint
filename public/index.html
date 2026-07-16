@@ -30,6 +30,8 @@
   <div class="sub" id="dash-sub">Loading your pipeline&hellip;</div>
   <div class="rule"></div>
 
+  <div id="health-strip" class="health-strip hidden" aria-live="polite"></div>
+
   <div class="grid grid-4" id="tiles"></div>
 
   <div class="eyebrow">Today &mdash; next actions</div>
@@ -136,6 +138,45 @@ async function loadJobs(){
   }catch(err){
     showLoadError("Couldn't reach the jobs function. Is `netlify dev` running? ("+err+")");
   }
+}
+
+/* ============================================================
+   BACKDOOR HEALTH STRIP — "is the machine alive?" at a glance.
+   Read-only derived numbers via /.netlify/functions/health. Stays hidden
+   until it loads (and on error), so it never shows an empty/broken box.
+   ============================================================ */
+function healthAge(n){ if(n==null) return "—"; if(n===0) return "Today"; if(n===1) return "Yesterday"; return n+"d ago"; }
+function healthDot(color){ var c={green:"hd-green",amber:"hd-amber",red:"hd-red"}[color]||""; return '<span class="health-dot '+c+'"></span>'; }
+function healthCell(color,label,val,sub,subWarn){
+  return '<div class="health-cell">'+healthDot(color)+
+    '<div class="health-txt"><div class="health-lbl">'+esc(label)+'</div>'+
+    '<div class="health-val">'+esc(val)+'</div>'+
+    (sub?'<div class="health-sub'+(subWarn?" warn":"")+'">'+esc(sub)+'</div>':'')+
+    '</div></div>';
+}
+async function loadHealth(){
+  try{
+    var resp=await fetch("/.netlify/functions/health");
+    var d=await resp.json();
+    if(!resp.ok||!d||d.error||!d.ok) return;   // stay hidden on any failure — non-critical
+    var probe=d.poll.probeFailed||0;
+    var awaiting=(d.awaiting.new||0)+(d.awaiting.reviewing||0);
+    var html=
+      healthCell(d.poll.color,"ATS poll",healthAge(d.poll.ageDays),
+        (probe>0?probe+" need slug":"all slugs resolved"), probe>0)+
+      healthCell(d.sweep.color,"Signals sweep",healthAge(d.sweep.ageDays),
+        d.sweep.last?("as of "+new Date(d.sweep.last+"T00:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric"})):"")+
+      '<div class="health-cell health-cell--link" onclick="showSignals()" role="button" tabindex="0">'+
+        healthDot(awaiting>0?"amber":"green")+
+        '<div class="health-txt"><div class="health-lbl">Awaiting eyes</div>'+
+        '<div class="health-val">'+awaiting+'</div>'+
+        '<div class="health-sub">'+(d.awaiting.new||0)+' new · '+(d.awaiting.reviewing||0)+' reviewing &rsaquo;</div>'+
+        '</div></div>'+
+      healthCell(null,"Watchlist",(d.coverage.active||0)+"/"+(d.coverage.total||0),"active companies");
+    var el=document.getElementById("health-strip");
+    el.innerHTML=html;
+    el.classList.remove("hidden");
+  }catch(_){ /* silent — the strip is a nicety, never blocks the dashboard */ }
 }
 
 function showLoadError(msg){
@@ -1043,6 +1084,7 @@ async function confirmDismiss(id){
 }
 
 loadJobs();
+loadHealth();
 computeW2();
 compute1099();
 </script>
