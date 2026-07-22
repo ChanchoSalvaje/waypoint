@@ -952,6 +952,8 @@ var SIG_TYPE_CLASS={
   "Restructure + AI Hiring":"sig-restructure",
   "Other":"sig-other"
 };
+var SIG_STATUS_CLASS={New:"sig-st-new",Reviewing:"sig-st-reviewing",Pitched:"sig-st-pitched",Dismissed:"sig-st-dismissed"};
+var SIG_SHOW_DISMISSED=false;
 
 function signalsBack(){ showView("dashboard"); window.scrollTo(0,0); }
 async function showSignals(){
@@ -989,9 +991,15 @@ function sigIsStale(s){
   var latest=sigMaxIso([s.date].concat(sigDatesInNotes(s.notes)));
   return latest ? sigDaysBetween(latest, sigIsoToday())>7 : false;
 }
-/* Cheapest possible future-date parse from the Notes (e.g. "~7/27" or "2026-07-27"). */
-function sigFutureDate(notes){
-  var text=notes||"", today=sigIsoToday(), cands=[], m;
+/* Next-action date parsed from the Notes BODIES (leading "[date]:" log stamps are
+   stripped so a status-change timestamp is never mistaken for a planned action).
+   Returns {iso, days, urgency:'past'|'soon'|'later'} or null. Amber if within 48h,
+   red if past — drives the Reviewing chip color and sort. */
+function sigActionText(notes){
+  return sigNoteLines(notes).map(function(l){ return l.replace(/^\[?\d{4}-\d{2}-\d{2}\]?\s*:\s*/,""); }).join("\n");
+}
+function sigNextAction(notes){
+  var text=sigActionText(notes), today=sigIsoToday(), cands=[], m;
   var re1=/(\d{4})-(\d{2})-(\d{2})/g;
   while((m=re1.exec(text))){ cands.push(m[1]+"-"+m[2]+"-"+m[3]); }
   var yr=new Date().getFullYear(), re2=/(?:^|[^\d])(\d{1,2})\/(\d{1,2})(?![\d\/])/g;
@@ -999,50 +1007,99 @@ function sigFutureDate(notes){
     var mo=Number(m[1]), da=Number(m[2]);
     if(mo>=1&&mo<=12&&da>=1&&da<=31) cands.push(yr+"-"+String(mo).padStart(2,"0")+"-"+String(da).padStart(2,"0"));
   }
-  var future=cands.filter(function(d){return d>=today;}).sort();
-  return future.length?future[0]:"";
+  if(!cands.length) return null;
+  var upcoming=cands.filter(function(d){return d>=today;}).sort();
+  var iso=upcoming.length?upcoming[0]:cands.slice().sort().slice(-1)[0];
+  var days=sigDaysBetween(today,iso);
+  return {iso:iso, days:days, urgency:(days<0?"past":(days<=2?"soon":"later"))};
 }
 function sigFmtDate(iso){ return iso?new Date(iso+"T00:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric"}):""; }
 
+/* Reviewing sorts by next-action date (soonest/overdue first, undated last). */
+function sigReviewingSort(a,b){
+  var na=sigNextAction(a.notes), nb=sigNextAction(b.notes);
+  if(na&&nb) return na.iso.localeCompare(nb.iso);
+  if(na) return -1; if(nb) return 1;
+  return (b.date||"").localeCompare(a.date||"");
+}
+function toggleDismissed(){ SIG_SHOW_DISMISSED=!SIG_SHOW_DISMISSED; renderSignals(); }
+/* One-line "why listed" caption from the Watchlist join (tier prefix + rationale). */
+function sigCaption(s){
+  if(!s.whyListed) return "";
+  var t=(s.tier||"").match(/^(\d+)/);
+  return (t?'<span class="sig-tier">T'+t[1]+'</span> · ':"")+esc(s.whyListed);
+}
 function renderSignals(){
-  var groups={}; SIG_GROUPS.forEach(function(s){groups[s]=[];});
-  SIGNALS.forEach(function(s){ (groups[s.status]||(groups[s.status]=[])).push(s); });
-  var html='<div class="sig-board">';
-  SIG_GROUPS.forEach(function(status){
-    var rows=(groups[status]||[]).slice().sort(function(a,b){return (b.date||"").localeCompare(a.date||"");});
-    html+='<div class="sig-col sig-col-'+status.toLowerCase()+'">'+
-      '<div class="sig-col-head"><span class="sig-col-name">'+status+'</span><span class="sig-col-count">'+rows.length+'</span></div>'+
-      '<div class="sig-col-body">'+
-        (rows.length?rows.map(signalCard).join(""):'<div class="sig-empty">Nothing here.</div>')+
-      '</div></div>';
+  var g={New:[],Reviewing:[],Pitched:[],Dismissed:[]};
+  SIGNALS.forEach(function(s){ (g[s.status]||(g[s.status]=[])).push(s); });
+  g.New.sort(function(a,b){return (b.date||"").localeCompare(a.date||"");});   // newest first
+  g.Reviewing.sort(sigReviewingSort);
+  g.Pitched.sort(function(a,b){return (b.date||"").localeCompare(a.date||"");});
+  g.Dismissed.sort(function(a,b){return (b.date||"").localeCompare(a.date||"");});
+  var html="";
+  ["New","Reviewing","Pitched"].forEach(function(status){
+    if(!g[status].length) return;
+    html+='<div class="sig-group-label">'+status+' <span>'+g[status].length+'</span></div>'+
+      '<div class="sig-feed">'+g[status].map(signalCard).join("")+'</div>';
   });
-  document.getElementById("signals-body").innerHTML=html+'</div>';
+  html+='<div class="sig-dismissed-wrap">'+
+    '<button type="button" class="sig-dismissed-toggle" onclick="toggleDismissed()">'+
+      (SIG_SHOW_DISMISSED?"Hide dismissed":("Show dismissed ("+g.Dismissed.length+")"))+'</button>'+
+    (SIG_SHOW_DISMISSED?'<div class="sig-feed sig-feed--dismissed">'+(g.Dismissed.length?g.Dismissed.map(signalCard).join(""):'<div class="empty">None dismissed.</div>')+'</div>':'')+
+  '</div>';
+  if(!g.New.length&&!g.Reviewing.length&&!g.Pitched.length&&!g.Dismissed.length) html='<div class="empty">No signals yet.</div>';
+  document.getElementById("signals-body").innerHTML=html;
 }
 function sigActionLabel(t){ return t==="Dismissed"?"Dismiss":("&rarr; "+esc(t)); }
 function signalCard(s){
   var typeClass=SIG_TYPE_CLASS[s.type]||"sig-other";
+  var stClass=SIG_STATUS_CLASS[s.status]||"sig-st-new";
   var who=(s.angle||"").split("\n")[0].trim();
   var last=sigLastNote(s.notes);
   var stale=sigIsStale(s);
-  var fut=sigFutureDate(s.notes);
+  var na=sigNextAction(s.notes);
+  var caption=sigCaption(s);
   var actions=SIG_GROUPS.filter(function(t){return t!==s.status;}).map(function(t){
     return '<button type="button" class="sig-act'+(t==="Dismissed"?" sig-act--dismiss":"")+'" onclick="onSignalAction(this,\''+s.id+'\',\''+t+'\')">'+sigActionLabel(t)+'</button>';
   }).join("");
+  var flags=
+    (na?'<span class="sig-chip sig-chip--'+na.urgency+'">&#9203; '+(na.urgency==="past"?"Overdue ":"")+esc(sigFmtDate(na.iso))+'</span>':'')+
+    (stale?'<span class="sig-stale">Stale &mdash; act or dismiss</span>':'');
   return '<div class="sig-card'+(stale?' sig-card--stale':'')+'">'+
     '<div class="sig-card-top">'+
+      '<span class="pill-s sig-status '+stClass+'">'+esc(s.status)+'</span>'+
       '<span class="sig-type '+typeClass+'">'+esc(s.type||"Signal")+'</span>'+
       (s.date?'<span class="sig-date">'+esc(sigFmtDate(s.date))+'</span>':'')+
     '</div>'+
     '<div class="sig-title">'+esc(s.signal)+'</div>'+
     (s.company?'<div class="sig-co">'+esc(s.company)+'</div>':'')+
-    ((fut||stale)?'<div class="sig-flags">'+
-      (fut?'<span class="sig-chip">&#9203; '+esc(sigFmtDate(fut))+'</span>':'')+
-      (stale?'<span class="sig-stale">Stale &mdash; act or dismiss</span>':'')+
-    '</div>':'')+
+    (caption?'<div class="sig-why">'+caption+'</div>':'')+
+    (flags?'<div class="sig-flags">'+flags+'</div>':'')+
     (who?'<div class="sig-who">'+esc(who)+'</div>':'')+
     (last?'<div class="sig-note"><span class="sig-note-lbl">Latest</span> '+mdInline(last)+'</div>':'')+
     signalExpand(s)+
+    signalStaged(s)+
+    signalAddNote(s)+
     '<div class="sig-actions">'+actions+'</div>'+
+  '</div>';
+}
+/* Staged Outreach (if the row has it): collapsible + copy-to-clipboard + Mark sent. */
+function signalStaged(s){
+  if(!s.staged || !s.staged.trim()) return "";
+  return '<details class="sig-staged"><summary>Staged outreach</summary>'+
+    '<div class="sig-staged-body">'+
+      '<div class="sig-staged-actions">'+
+        '<button type="button" class="sig-copy" onclick="copyStaged(this,\''+s.id+'\')">Copy</button>'+
+        '<button type="button" class="sig-marksent" onclick="onMarkSent(this,\''+s.id+'\')">Mark sent</button>'+
+      '</div>'+
+      '<div class="sig-staged-text md-scope">'+mdToHtml(s.staged)+'</div>'+
+    '</div></details>';
+}
+/* Per-card note box → appends "[date]: text" (read-then-concatenate, server-side). */
+function signalAddNote(s){
+  return '<div class="sig-addnote">'+
+    '<input type="text" class="sig-note-input" id="signote-'+s.id+'" placeholder="Add a dated note…" onkeydown="sigNoteKey(event,\''+s.id+'\')">'+
+    '<button type="button" class="sig-note-btn" onclick="onAddSigNote(this,\''+s.id+'\')">Add note</button>'+
   '</div>';
 }
 function signalExpand(s){
@@ -1071,14 +1128,45 @@ function sigLockCard(btn,locked){
   if(locked){ if(btn.dataset.orig==null) btn.dataset.orig=btn.innerHTML; btn.innerHTML="…"; }
   else if(btn.dataset.orig!=null){ btn.innerHTML=btn.dataset.orig; delete btn.dataset.orig; }
 }
-async function changeSignalStatus(id,status,reason){
-  var payload={id:id,status:status}; if(reason) payload.reason=reason;
+/* Single POST path. Reconciles the row in place, preserving the Watchlist-join
+   fields (whyListed/tier) which the write response doesn't re-compute, then re-renders. */
+async function postSignal(payload){
   var resp=await fetch("/.netlify/functions/signals",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
   var data=await resp.json();
   if(!resp.ok||(data&&data.error)) throw new Error((data&&data.error)||("HTTP "+resp.status));
-  for(var k=0;k<SIGNALS.length;k++){ if(SIGNALS[k].id===id){ SIGNALS[k]=data.signal; break; } }
+  for(var k=0;k<SIGNALS.length;k++){ if(SIGNALS[k].id===payload.id){ var old=SIGNALS[k]; SIGNALS[k]=data.signal; SIGNALS[k].whyListed=old.whyListed; SIGNALS[k].tier=old.tier; break; } }
   renderSignals();
   return data.signal;
+}
+function changeSignalStatus(id,status,reason){ var p={id:id,status:status}; if(reason) p.reason=reason; return postSignal(p); }
+
+/* Copy the RAW staged-outreach text (not the rendered markdown). */
+function fallbackCopy(txt){ try{ var ta=document.createElement("textarea"); ta.value=txt; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta); }catch(e){} }
+function copyStaged(btn,id){
+  var s=SIGNALS.filter(function(x){return x.id===id;})[0]; if(!s) return;
+  var txt=s.staged||"", o=btn.textContent;
+  function done(){ btn.textContent="Copied ✓"; setTimeout(function(){ btn.textContent=o; },1600); }
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(done,function(){ fallbackCopy(txt); done(); }); }
+  else { fallbackCopy(txt); done(); }
+}
+/* Mark sent → Status Pitched + "[date]: Outreach sent by Tim". */
+async function onMarkSent(btn,id){
+  if(SIG_WRITING) return;
+  SIG_WRITING=true; btn.disabled=true; var o=btn.textContent; btn.textContent="…";
+  try{ await postSignal({id:id,status:"Pitched",note:"Outreach sent by Tim"}); sigToast("Marked sent → Pitched ✓","ok"); }
+  catch(err){ btn.disabled=false; btn.textContent=o; sigToast("Couldn’t mark sent: "+err.message,"err"); }
+  finally{ SIG_WRITING=false; }
+}
+/* Per-card Add note. */
+function sigNoteKey(e,id){ if(e.key==="Enter"){ e.preventDefault(); onAddSigNote(e.target.parentNode.querySelector(".sig-note-btn"),id); } }
+async function onAddSigNote(btn,id){
+  if(SIG_WRITING) return;
+  var inp=document.getElementById("signote-"+id), txt=inp?inp.value.trim():"";
+  if(!txt){ if(inp) inp.focus(); return; }
+  SIG_WRITING=true; btn.disabled=true; if(inp) inp.disabled=true; var o=btn.textContent; btn.textContent="…";
+  try{ await postSignal({id:id,noteAppend:txt}); sigToast("Note added ✓","ok"); }
+  catch(err){ btn.disabled=false; if(inp){ inp.disabled=false; } btn.textContent=o; sigToast("Couldn’t add note: "+err.message,"err"); }
+  finally{ SIG_WRITING=false; }
 }
 async function onSignalAction(btn,id,status){
   if(SIG_WRITING) return;                       // ignore re-clicks while a write is in flight

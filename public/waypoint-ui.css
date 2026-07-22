@@ -331,63 +331,99 @@ footer{margin-top:28px;text-align:center;color:var(--faint);font-size:12px}
 .settings-changelog{font-family:ui-monospace,monospace;font-size:11.5px;color:var(--muted);white-space:pre-wrap;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:14px;max-height:150px;overflow:auto}
 
 /* ============================================================
-   SIGNALS BOARD (Waypoint UI addendum, component A)
-   Status-grouped board: New → Reviewing → Pitched → Dismissed.
+   SIGNALS FEED — single-column full-width card feed (Opportunities pattern).
+   Grouped New → Reviewing → Pitched; Dismissed behind a toggle.
    ============================================================ */
-.sig-board{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;align-items:start}
-.sig-col{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;min-width:0}
-.sig-col-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);border-top:3px solid var(--faint)}
-.sig-col-new .sig-col-head{border-top-color:var(--gold)}
-.sig-col-reviewing .sig-col-head{border-top-color:var(--steel-2)}
-.sig-col-pitched .sig-col-head{border-top-color:var(--live)}
-.sig-col-dismissed .sig-col-head{border-top-color:var(--closed)}
-.sig-col-name{font-weight:700;font-size:13px;letter-spacing:.04em;color:var(--ink)}
-.sig-col-count{font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--muted);background:var(--panel);border-radius:999px;padding:2px 9px;min-width:24px;text-align:center}
-.sig-col-body{padding:10px;display:flex;flex-direction:column;gap:10px}
-.sig-empty{color:var(--faint);font-size:12.5px;font-style:italic;padding:8px 6px}
+.sig-group-label{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--voltage-deep);margin:24px 0 10px;display:flex;align-items:center;gap:8px}
+.sig-group-label:first-child{margin-top:4px}
+.sig-group-label span{font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);background:var(--panel);border-radius:999px;padding:1px 8px;letter-spacing:0}
+.sig-feed{display:flex;flex-direction:column;gap:12px}
 
-.sig-card{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:12px 13px}
+.sig-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
 .sig-card--stale{border-color:var(--voltage-line);box-shadow:inset 3px 0 0 var(--voltage)}
-.sig-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
-.sig-date{font-family:ui-monospace,monospace;font-size:10.5px;color:var(--faint);white-space:nowrap;flex:0 0 auto}
-.sig-type{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 9px;border-radius:999px;color:var(--on-dark);line-height:1.35;min-width:0}
+.sig-card-top{display:flex;align-items:center;gap:9px;margin-bottom:9px;flex-wrap:wrap}
+.sig-status{flex:0 0 auto}
+.sig-st-new{background:var(--gold);color:var(--ink)}
+.sig-st-reviewing{background:var(--steel-2);color:var(--on-dark)}
+.sig-st-pitched{background:var(--live);color:var(--on-dark)}
+.sig-st-dismissed{background:var(--closed);color:var(--ink)}
+.sig-date{font-family:ui-monospace,monospace;font-size:11px;color:var(--faint);white-space:nowrap;margin-left:auto}
+.sig-type{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 9px;border-radius:999px;color:var(--on-dark);line-height:1.35}
 .sig-exec{background:var(--interviewing)}          /* Muted Rosewood — exec hire */
 .sig-coe{background:var(--steel-2)}                /* Soft Steel Blue — CoE launch */
 .sig-commit{background:var(--steel)}               /* Mesquite Green — public commitment */
 .sig-restructure{background:var(--ready)}          /* Sonoran Clay — restructure + hiring */
 .sig-other{background:var(--panel);color:var(--muted)}
-.sig-title{font-weight:650;font-size:14px;line-height:1.35;color:var(--ink);overflow-wrap:anywhere}
-.sig-co{font-size:12.5px;color:var(--muted);margin-top:2px;font-weight:600}
-.sig-flags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.sig-chip{font-size:11px;font-weight:600;color:var(--voltage-deep);background:var(--voltage-soft);border:1px solid var(--voltage-line);border-radius:999px;padding:2px 9px;white-space:nowrap}
+.sig-title{font-weight:700;font-size:16px;line-height:1.3;color:var(--ink);letter-spacing:-.01em;overflow-wrap:anywhere}
+.sig-co{font-size:13px;color:var(--muted);margin-top:3px;font-weight:600}
+.sig-why{font-size:12.5px;color:var(--muted);margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sig-tier{font-weight:700;color:var(--steel-2)}
+.sig-flags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.sig-chip{font-size:11px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;border:1px solid}
+.sig-chip--later{color:var(--steel-2);background:var(--panel);border-color:var(--line)}
+.sig-chip--soon{color:var(--voltage-deep);background:var(--voltage-soft);border-color:var(--voltage-line)}
+.sig-chip--past{color:var(--flag);background:var(--flag-soft);border-color:#E9C9C2}
 .sig-stale{font-size:11px;font-weight:600;color:var(--flag);background:var(--flag-soft);border:1px solid #E9C9C2;border-radius:999px;padding:2px 9px}
-.sig-who{font-size:12.5px;color:var(--ink);line-height:1.45;margin-top:9px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.sig-note{font-size:12px;color:var(--muted);line-height:1.45;margin-top:9px;padding-top:9px;border-top:1px solid var(--line);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.sig-who{font-size:13.5px;color:var(--ink);line-height:1.5;margin-top:11px}
+.sig-note{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:11px;padding-top:10px;border-top:1px solid var(--line);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .sig-note-lbl{font-family:ui-monospace,monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-right:5px}
-.sig-more{margin-top:9px}
-.sig-more summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--steel-2);list-style:none;padding:2px 0}
-.sig-more summary::-webkit-details-marker{display:none}
-.sig-more summary::before{content:"\25B8";font-size:10px;margin-right:5px;color:var(--faint)}
-.sig-more[open] summary::before{content:"\25BE"}
-.sig-more summary:hover{color:var(--voltage)}
+
+/* expandable details (Summary / Angle / Notes) */
+.sig-more{margin-top:11px}
+.sig-more>summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--steel-2);list-style:none;padding:3px 0}
+.sig-more>summary::-webkit-details-marker{display:none}
+.sig-more>summary::before{content:"\25B8";font-size:10px;margin-right:5px;color:var(--faint)}
+.sig-more[open]>summary::before{content:"\25BE"}
+.sig-more>summary:hover{color:var(--voltage)}
 .sig-more-body{padding:8px 0 2px}
 .sig-sec{margin-bottom:12px}
 .sig-sec-lbl{display:block;font-family:ui-monospace,monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--voltage-deep);font-weight:700;margin-bottom:4px}
-.sig-sec p{margin:0;font-size:13px;line-height:1.55;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
+.sig-sec p{margin:0;font-size:13.5px;line-height:1.55;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
 .sig-src{margin-top:4px;font-size:13px;padding:8px 14px}
-.sig-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;padding-top:11px;border-top:1px solid var(--line)}
-.sig-act{font:inherit;font-size:11.5px;font-weight:600;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 11px;cursor:pointer;white-space:nowrap}
+
+/* Staged Outreach (collapsible + copy + Mark sent) */
+.sig-staged{margin-top:11px;border:1px solid var(--voltage-line);border-radius:10px;background:var(--voltage-soft);overflow:hidden}
+.sig-staged>summary{cursor:pointer;list-style:none;padding:9px 13px;font-size:12.5px;font-weight:700;letter-spacing:.02em;color:var(--voltage-deep)}
+.sig-staged>summary::-webkit-details-marker{display:none}
+.sig-staged>summary::before{content:"\2709";margin-right:7px}
+.sig-staged-body{padding:0 13px 13px}
+.sig-staged-actions{display:flex;gap:8px;margin-bottom:9px}
+.sig-copy,.sig-marksent{font:inherit;font-size:12px;font-weight:600;border-radius:8px;padding:6px 13px;cursor:pointer;border:1px solid}
+.sig-copy{color:var(--ink);background:var(--surface);border-color:var(--line)}
+.sig-copy:hover{border-color:var(--voltage)}
+.sig-marksent{color:var(--on-dark);background:var(--steel);border-color:var(--steel)}
+.sig-marksent:hover{background:var(--steel-deep)}
+.sig-copy:disabled,.sig-marksent:disabled{opacity:.55;cursor:default}
+.sig-staged-text{background:var(--surface);border:1px solid var(--voltage-line);border-radius:8px;padding:11px 13px}
+.sig-staged-text .md-p,.sig-staged-text .md-ul li{font-size:13.5px}
+
+/* Per-card Add note */
+.sig-addnote{display:flex;gap:8px;margin-top:12px}
+.sig-note-input{flex:1;min-width:0;font-size:13px;padding:8px 12px}
+.sig-note-btn{font:inherit;font-size:12.5px;font-weight:600;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 14px;cursor:pointer;white-space:nowrap;flex:0 0 auto}
+.sig-note-btn:hover{border-color:var(--voltage);color:var(--voltage-deep)}
+.sig-note-btn:disabled{opacity:.55;cursor:default}
+
+/* status-change buttons */
+.sig-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.sig-act{font:inherit;font-size:12px;font-weight:600;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 13px;cursor:pointer;white-space:nowrap}
 .sig-act:hover{border-color:var(--voltage);color:var(--voltage-deep)}
 .sig-act--dismiss{color:var(--muted)}
 .sig-act--dismiss:hover{border-color:var(--flag);color:var(--flag)}
 
-/* Toast for one-tap status moves */
+/* Dismissed toggle */
+.sig-dismissed-wrap{margin-top:26px}
+.sig-dismissed-toggle{font:inherit;font-size:13px;font-weight:600;color:var(--steel-2);background:none;border:1px solid var(--line);border-radius:9px;padding:8px 14px;cursor:pointer}
+.sig-dismissed-toggle:hover{border-color:var(--steel-2)}
+.sig-feed--dismissed{margin-top:12px}
+.sig-feed--dismissed .sig-card{opacity:.72}
+
+/* Toast for writes */
 .sig-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:70;background:var(--ink);color:var(--on-dark);font-size:13.5px;font-weight:600;padding:11px 18px;border-radius:10px;box-shadow:0 10px 30px rgba(37,40,61,.3);max-width:90vw}
 .sig-toast.ok{background:var(--live)}
 .sig-toast.err{background:var(--flag)}
 
-@media (max-width:900px){.sig-board{grid-template-columns:1fr 1fr}}
-@media (max-width:560px){.sig-board{grid-template-columns:1fr}}
+@media (max-width:560px){.sig-addnote{flex-wrap:wrap}.sig-note-input{flex:1 1 100%}}
 
 /* ============================================================
    BACKDOOR HEALTH STRIP (Waypoint UI addendum, component B)
