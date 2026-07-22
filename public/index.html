@@ -189,6 +189,37 @@ function showLoadError(msg){
 var STAGE_ORDER = ["Saved","Tailoring","Ready to apply","Applied","Screening","Interviewing","Offer","Closed"];
 var STAGE_CLASS = {Saved:"st-saved",Tailoring:"st-tailoring","Ready to apply":"st-ready",Applied:"st-applied",Screening:"st-screening",Interviewing:"st-interviewing",Offer:"st-offer",Closed:"st-closed"};
 function esc(s){ return (s||"").replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];}); }
+
+/* ============================================================
+   TINY SANITIZED MARKDOWN — no library. Handles exactly: **bold**,
+   "- "/"* " bullets, blank-line paragraphs, and single line breaks.
+   A whole line that is just **Label** (or an ALL-CAPS "LABEL:" line, the
+   older dossier format) renders as a header-in-miniature. Everything is
+   esc()'d FIRST, so the ONLY HTML that reaches the DOM is the tags we add.
+   ============================================================ */
+function mdInline(s){
+  return esc(s).replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>");
+}
+function mdToHtml(text){
+  var lines=(text||"").replace(/\r\n?/g,"\n").split("\n");
+  var out="",list=null,para=[];
+  function flushPara(){ if(para.length){ out+='<p class="md-p">'+para.join("<br>")+'</p>'; para=[]; } }
+  function flushList(){ if(list!==null){ out+='<ul class="md-ul">'+list+'</ul>'; list=null; } }
+  function flushAll(){ flushList(); flushPara(); }
+  for(var i=0;i<lines.length;i++){
+    var line=lines[i].trim();
+    if(line===""){ flushAll(); continue; }
+    var mb=line.match(/^[-*]\s+(.*)$/);                        // "- " / "* " bullet
+    if(mb){ flushPara(); list=(list||"")+'<li>'+mdInline(mb[1])+'</li>'; continue; }
+    var mh=line.match(/^\*\*(.+?):?\*\*:?$/);                  // whole line bold -> header
+    if(mh){ flushAll(); var lbl=mh[1].trim(); out+='<div class="md-h'+(/\b(RISK|WATCH)\b/i.test(lbl)?" md-h--flag":"")+'">'+mdInline(lbl)+'</div>'; continue; }
+    var mc=line.match(/^([A-Z][A-Z0-9 &'\-\/]{1,38}[A-Z0-9])\s*(\([^)]*\))?\s*:\s*(.*)$/); // ALL-CAPS "LABEL:" (legacy)
+    if(mc){ flushAll(); var flag=/\b(RISK|WATCH)\b/i.test(mc[1]+" "+(mc[2]||"")); out+='<div class="md-h'+(flag?" md-h--flag":"")+'">'+esc(mc[1].trim())+(mc[2]?' <span class="md-h-qual">'+esc(mc[2].trim())+'</span>':"")+'</div>'; if(mc[3]&&mc[3].trim()) para.push(mdInline(mc[3].trim())); continue; }
+    para.push(mdInline(line));                                 // ordinary line
+  }
+  flushAll();
+  return out||('<p class="md-p">'+mdInline((text||"").trim())+'</p>');
+}
 function isClosed(j){ return j.stage==="Closed"; }
 function hasPrep(j){ return j.prep && (j.prep.background||j.prep.edge||j.prep.questions||j.prep.likely); }
 function daysUntil(d){ if(!d) return null; var ms=new Date(d+"T00:00:00")-new Date(new Date().toDateString()); return Math.round(ms/86400000); }
@@ -480,6 +511,7 @@ function prepBody(field,kind){
   var t=(field||"").trim();
   if(!t) return '<div class="empty">No prep authored yet.</div>';
   if(kind==="questions") return renderQuestions(t);
+  if(kind==="background"||kind==="edge") return '<div class="md-scope">'+mdToHtml(t)+'</div>';
   return renderSections(t);
 }
 function prepRow(title,content,kind){
@@ -512,7 +544,7 @@ function statusActivity(j){
     '<div class="edit-actions">'+closeToggle(j,"card")+'</div>'+
     '<div class="edit-divider"></div>'+
     '<label class="fld">Activity log</label>'+
-    (j.notes?'<p class="body">'+esc(j.notes)+'</p>':'<div class="empty">No notes yet.</div>')+
+    (j.notes?'<div class="md-scope md-body">'+mdToHtml(j.notes)+'</div>':'<div class="empty">No notes yet.</div>')+
     '<label class="fld" for="edit-note" style="margin-top:16px">Add a dated note</label>'+
     '<textarea id="edit-note" rows="2" placeholder="What happened? A timestamped line (Arizona time) is appended below — nothing is overwritten."></textarea>'+
     '<div class="edit-actions">'+
@@ -994,7 +1026,7 @@ function signalCard(s){
   var stale=sigIsStale(s);
   var fut=sigFutureDate(s.notes);
   var actions=SIG_GROUPS.filter(function(t){return t!==s.status;}).map(function(t){
-    return '<button type="button" class="sig-act'+(t==="Dismissed"?" sig-act--dismiss":"")+'" onclick="onSignalAction(\''+s.id+'\',\''+t+'\')">'+sigActionLabel(t)+'</button>';
+    return '<button type="button" class="sig-act'+(t==="Dismissed"?" sig-act--dismiss":"")+'" onclick="onSignalAction(this,\''+s.id+'\',\''+t+'\')">'+sigActionLabel(t)+'</button>';
   }).join("");
   return '<div class="sig-card'+(stale?' sig-card--stale':'')+'">'+
     '<div class="sig-card-top">'+
@@ -1008,7 +1040,7 @@ function signalCard(s){
       (stale?'<span class="sig-stale">Stale &mdash; act or dismiss</span>':'')+
     '</div>':'')+
     (who?'<div class="sig-who">'+esc(who)+'</div>':'')+
-    (last?'<div class="sig-note"><span class="sig-note-lbl">Latest</span> '+esc(last)+'</div>':'')+
+    (last?'<div class="sig-note"><span class="sig-note-lbl">Latest</span> '+mdInline(last)+'</div>':'')+
     signalExpand(s)+
     '<div class="sig-actions">'+actions+'</div>'+
   '</div>';
@@ -1016,9 +1048,9 @@ function signalCard(s){
 function signalExpand(s){
   var url=safeUrl(s.sourceUrl);
   var body=
-    (s.summary?'<div class="sig-sec"><span class="sig-sec-lbl">Summary</span><p>'+esc(s.summary)+'</p></div>':'')+
-    (s.angle?'<div class="sig-sec"><span class="sig-sec-lbl">Suggested angle</span><p>'+esc(s.angle)+'</p></div>':'')+
-    (s.notes?'<div class="sig-sec"><span class="sig-sec-lbl">Notes</span><p>'+esc(s.notes)+'</p></div>':'')+
+    (s.summary?'<div class="sig-sec"><span class="sig-sec-lbl">Summary</span>'+mdToHtml(s.summary)+'</div>':'')+
+    (s.angle?'<div class="sig-sec"><span class="sig-sec-lbl">Suggested angle</span>'+mdToHtml(s.angle)+'</div>':'')+
+    (s.notes?'<div class="sig-sec"><span class="sig-sec-lbl">Notes</span>'+mdToHtml(s.notes)+'</div>':'')+
     (url?'<a class="posting-btn sig-src" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">Open source <span aria-hidden="true">&rarr;</span></a>':'');
   if(!body) return '';
   return '<details class="sig-more"><summary>Details</summary><div class="sig-more-body">'+body+'</div></details>';
@@ -1029,6 +1061,16 @@ function sigToast(msg,cls){
   t.className="sig-toast "+(cls||""); t.textContent=msg; t.classList.remove("hidden");
   clearTimeout(sigToast._t); sigToast._t=setTimeout(function(){ t.classList.add("hidden"); },2600);
 }
+/* One write at a time on the board. Guards against a rapid multi-click firing
+   duplicate Notes appends (seen 2026-07-17: a triple-click wrote three notes). */
+var SIG_WRITING=false;
+function sigLockCard(btn,locked){
+  var card=btn.closest(".sig-card"); if(!card) return;
+  var bs=card.querySelectorAll(".sig-act");
+  for(var i=0;i<bs.length;i++) bs[i].disabled=locked;
+  if(locked){ if(btn.dataset.orig==null) btn.dataset.orig=btn.innerHTML; btn.innerHTML="…"; }
+  else if(btn.dataset.orig!=null){ btn.innerHTML=btn.dataset.orig; delete btn.dataset.orig; }
+}
 async function changeSignalStatus(id,status,reason){
   var payload={id:id,status:status}; if(reason) payload.reason=reason;
   var resp=await fetch("/.netlify/functions/signals",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
@@ -1038,10 +1080,17 @@ async function changeSignalStatus(id,status,reason){
   renderSignals();
   return data.signal;
 }
-async function onSignalAction(id,status){
+async function onSignalAction(btn,id,status){
+  if(SIG_WRITING) return;                       // ignore re-clicks while a write is in flight
   if(status==="Dismissed"){ openDismissDialog(id); return; }
-  try{ await changeSignalStatus(id,status,null); sigToast("Moved to "+status+" ✓","ok"); }
-  catch(err){ sigToast("Couldn’t update: "+err.message,"err"); }
+  SIG_WRITING=true; sigLockCard(btn,true);
+  try{
+    await changeSignalStatus(id,status,null);   // success re-renders the board (fresh, enabled buttons)
+    sigToast("Moved to "+status+" ✓","ok");
+  }catch(err){
+    sigLockCard(btn,false);                      // failure: restore this card's buttons
+    sigToast("Couldn’t update: "+err.message,"err");
+  }finally{ SIG_WRITING=false; }
 }
 
 /* Dismiss requires a one-line reason (mirrors the Close action). */
@@ -1073,14 +1122,17 @@ function sigCurrentReason(){ var t=document.getElementById("sig-reason-text"); v
 function updateSigDismiss(){ var b=document.getElementById("sig-dismiss-confirm"); if(b) b.disabled=!sigCurrentReason(); }
 function dismissCancel(){ SIG_SELECTED_REASON=""; document.getElementById("modal-root").innerHTML=""; }
 async function confirmDismiss(id){
+  if(SIG_WRITING) return;
   var reason=sigCurrentReason(); if(!reason) return;
   var b=document.getElementById("sig-dismiss-confirm"); if(b) b.disabled=true;
+  SIG_WRITING=true;
   flashStatus("sig-dismiss-status","Dismissing…","");
   try{
     await changeSignalStatus(id,"Dismissed",reason);
     document.getElementById("modal-root").innerHTML="";
     sigToast("Dismissed ✓","ok");
   }catch(err){ flashStatus("sig-dismiss-status","Couldn’t dismiss: "+err.message,"err"); if(b) b.disabled=false; }
+  finally{ SIG_WRITING=false; }
 }
 
 loadJobs();
