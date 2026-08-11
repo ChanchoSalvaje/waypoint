@@ -27,6 +27,9 @@ const FIELDS = {
   link:           "fldpNcqFRnN7zMzzO", // Link
   source:         "fldVtN8Rdj3b1yDML", // Source (singleSelect)
   pursue:         "fldk41nshQmCXHanE", // Pursue (checkbox) — queues the job for enrichment
+  fitRead:        "fldQEgL4DABbkFEK5", // Fit Read — the scorer's plain-language rationale
+  lane:           "fldJ3EenjUf7rN34u", // Lane (singleSelect) — which lane's ruler scored this row
+  dateFound:      "fldsfSFJUdiVr4VFZ", // Date Found (dateTime) — drives Today's sort + "new today"
   prepBackground: "fldkmdiZ6NgeFVEp2", // Company Background & History
   prepEdge:       "fldwwUC9CLZ9WHIYA", // Edge Facts
   prepQuestions:  "fldTCQjStup2JH3VP", // Questions to Ask
@@ -51,6 +54,12 @@ function mapRecord(record) {
     link:           f[FIELDS.link] || "",
     source:         f[FIELDS.source] || "",
     pursue:         !!f[FIELDS.pursue],   // checkbox → boolean (unchecked comes back undefined)
+    fitRead:        f[FIELDS.fitRead] || "",
+    lane:           f[FIELDS.lane] || "",
+    // Date Found comes back as a full ISO timestamp at UTC midnight. We keep only
+    // the "YYYY-MM-DD" part so the client compares calendar dates and never has to
+    // reason about a timezone shift.
+    dateFound:      (f[FIELDS.dateFound] || "").slice(0, 10),
     prep: {
       background: f[FIELDS.prepBackground] || "",
       edge:       f[FIELDS.prepEdge] || "",

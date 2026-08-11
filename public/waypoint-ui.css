@@ -470,3 +470,95 @@ footer{margin-top:28px;text-align:center;color:var(--faint);font-size:12px}
 .md-body .md-p,.md-body .md-ul li{font-size:15px}
 .sig-more-body .md-p,.sig-more-body .md-ul li{font-size:13px;line-height:1.5}
 .sig-more-body .md-h{font-size:12px;margin-top:11px}
+
+/* ============================================================
+   TODAY — daily triage cards (#view-today). One card per Saved
+   role, two decisions: Pursue (Ember Copper, the accent action)
+   or Close (muted — deliberate, never punitive).
+   ============================================================ */
+.tj-card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:16px 18px;margin-bottom:14px;
+  transition:opacity .35s ease,transform .35s ease,border-color .15s ease;
+}
+.tj-card:last-child{margin-bottom:0}
+.tj-card:hover{border-color:var(--voltage-line)}
+
+/* mid-write: dim and lock out a second click */
+.tj-busy{opacity:.6;pointer-events:none}
+/* decided: fade out of the queue */
+.tj-done{opacity:0;transform:translateY(-6px);pointer-events:none}
+
+.tj-head{display:flex;align-items:flex-start;gap:12px}
+.tj-title{flex:1;min-width:0}
+.tj-co{font-weight:700;font-size:15px;color:var(--ink);line-height:1.3}
+.tj-role{font-size:14px;color:var(--muted);line-height:1.4;margin-top:2px}
+
+/* "New today" — the one thing worth interrupting the scan for */
+.tj-new{
+  display:inline-block;vertical-align:2px;margin-left:7px;
+  background:var(--voltage);color:var(--on-dark);
+  font-size:10.5px;font-weight:600;letter-spacing:.04em;
+  padding:2px 7px;border-radius:999px;white-space:nowrap;
+}
+
+/* Fit score badge — mirrors the .fit pill on the dashboard rows */
+.tj-fit{
+  display:inline-flex;align-items:center;gap:6px;flex:none;
+  background:var(--panel);border:1px solid var(--line);border-radius:999px;
+  padding:4px 10px;font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap;
+}
+.tj-fit .dot{width:7px;height:7px;border-radius:50%;background:var(--voltage);flex:none}
+
+.tj-chips{display:flex;flex-wrap:wrap;gap:6px;margin:11px 0 0}
+.tj-chip{
+  background:var(--panel);color:var(--muted);border-radius:6px;
+  padding:3px 9px;font-size:12px;line-height:1.5;
+}
+.tj-chip--comp{color:var(--ink);font-weight:500}
+
+/* Fit Read — the rationale, rendered through the shared tiny-markdown */
+.tj-read{
+  margin-top:12px;padding-top:12px;border-top:1px solid var(--line);
+}
+.tj-read .md-p,.tj-read .md-ul li{font-size:13.5px;line-height:1.55;color:var(--muted)}
+.tj-read .md-h{font-size:12px;margin-top:10px}
+
+.tj-foot{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  margin-top:14px;flex-wrap:wrap;
+}
+/* the posting link stays quiet — available, never competing with the buttons */
+.tj-link{
+  display:inline-flex;align-items:center;gap:5px;
+  color:var(--steel-2);font-size:12.5px;text-decoration:none;
+}
+.tj-link:hover{color:var(--ink);text-decoration:underline}
+.tj-link .ext-ico{width:13px;height:13px}
+
+.tj-actions{display:flex;align-items:center;gap:9px;margin-left:auto}
+.tj-actions .edit-status{font-size:12px}
+
+.tj-btn{
+  font:inherit;font-size:13px;font-weight:500;
+  padding:8px 18px;border-radius:9px;cursor:pointer;
+  border:1px solid transparent;transition:background .15s ease,border-color .15s ease,color .15s ease;
+}
+/* Pursue — the primary action, Ember Copper per DESIGN.md */
+.tj-btn--pursue{background:var(--voltage);color:var(--on-dark)}
+.tj-btn--pursue:hover{background:var(--voltage-deep)}
+/* Close — muted; a real option, just not the loud one */
+.tj-btn--close{background:var(--panel);color:var(--muted);border-color:var(--line)}
+.tj-btn--close:hover{background:var(--line);color:var(--ink)}
+.tj-btn:focus-visible{outline:2px solid var(--voltage);outline-offset:2px}
+
+/* logged date — quiet metadata, never competing with the decision buttons */
+.tj-logged{
+  margin-top:10px;font-size:11.5px;color:var(--faint);
+}
+
+@media (max-width:560px){
+  .tj-foot{align-items:flex-start}
+  .tj-actions{width:100%;margin-left:0;justify-content:flex-end}
+  .tj-btn{flex:1;text-align:center}
+}

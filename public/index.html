@@ -18,6 +18,7 @@
     <div><div class="name">Waypoint</div><div class="sub">Command Center</div></div>
   </div>
   <div class="top-actions">
+    <button type="button" class="top-btn" onclick="showToday()">Today &rsaquo;</button>
     <button type="button" class="top-btn" onclick="showSignals()">Signals &rsaquo;</button>
     <button type="button" class="top-btn" onclick="showComp()">Comp &rsaquo;</button>
     <button type="button" class="top-btn" onclick="showSettings()">Settings &rsaquo;</button>
@@ -111,6 +112,15 @@
   <div id="sig-toast" class="sig-toast hidden"></div>
 </div>
 
+<!-- ===================== TODAY VIEW (daily triage) ===================== -->
+<div id="view-today" class="page hidden">
+  <button class="back" onclick="todayBack()">&lsaquo; Back to pipeline</button>
+  <h1>Today's jobs</h1>
+  <div class="sub" id="today-sub">Freshly saved roles, newest first. Pursue it or close it &mdash; one pass, no backlog.</div>
+  <div class="rule"></div>
+  <div id="today-body"><div class="empty">Loading today&rsquo;s jobs&hellip;</div></div>
+</div>
+
 <!-- modal root (Close confirm popover) -->
 <div id="modal-root"></div>
 
@@ -123,6 +133,7 @@
    the data source is defined. Strictly read-only.
    ============================================================ */
 var JOBS = [];
+var JOBS_LOADED = false;
 function getJobs(){ return JOBS; }
 
 async function loadJobs(){
@@ -134,7 +145,10 @@ async function loadJobs(){
       return;
     }
     JOBS = (data && data.jobs) || [];
+    JOBS_LOADED = true;
     renderDashboard();
+    // If Today is already open (clicked before the fetch landed), fill it in now.
+    if(!document.getElementById("view-today").classList.contains("hidden")) renderToday();
   }catch(err){
     showLoadError("Couldn't reach the jobs function. Is `netlify dev` running? ("+err+")");
   }
@@ -625,8 +639,164 @@ function showView(v){
   document.getElementById("view-comp").classList.add("hidden");
   document.getElementById("view-settings").classList.add("hidden");
   document.getElementById("view-signals").classList.add("hidden");
+  document.getElementById("view-today").classList.add("hidden");
 }
 function showDashboard(){ showView("dashboard"); window.scrollTo(0,0); }
+
+/* ============================================================
+   TODAY — the daily triage pass. Every Saved role, newest first,
+   as a card with the two decisions that matter: Pursue or Close.
+   Reads from the SAME JOBS array the dashboard renders from (no
+   second fetch), and writes through the SAME update-job endpoint
+   the detail view uses (no second write path).
+   ============================================================ */
+
+/* Today's date in Arizona time (America/Phoenix, no DST) — matched to the
+   stamp update-job.js writes, so "new today" agrees with the server. */
+function todayIsoAZ(){
+  var parts=new Intl.DateTimeFormat("en-CA",{timeZone:"America/Phoenix",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
+  var p={}; for(var i=0;i<parts.length;i++){ p[parts[i].type]=parts[i].value; }
+  return p.year+"-"+p.month+"-"+p.day;
+}
+function todayIsNew(j){ return !!j.dateFound && j.dateFound===todayIsoAZ(); }
+
+/* Saved only, newest first. Undated rows sort last rather than jumping the queue. */
+function todayJobs(){
+  return getJobs().filter(function(j){ return j.stage==="Saved"; })
+    .slice().sort(function(a,b){
+      var d=(b.dateFound||"").localeCompare(a.dateFound||"");
+      return d!==0 ? d : (b.fit||0)-(a.fit||0);
+    });
+}
+
+/* The logged date — when the mine found this row — as a plain calendar date.
+   dateFound arrives as "YYYY-MM-DD" (sliced from a UTC timestamp), so we anchor it
+   at UTC NOON before formatting in Arizona time. Formatting the bare string would
+   parse as UTC midnight and render as the PREVIOUS day anywhere west of Greenwich;
+   noon leaves no room for the offset to cross a date boundary. The year appears
+   only when it isn't the current one.
+
+   FUTURE — posted date: deliberately not shown. Opportunities has no posted /
+   publication-date field; its only dates (Date Found, Date Applied, Next Action By,
+   Next Action Date) all record OUR activity, not the employer's. A real "Posted"
+   line would first require capturing the date at mine time from the ATS / job-board
+   payload and storing it in a new Airtable field. Until that data is captured there
+   is nothing honest to render here, so nothing is rendered. */
+function todayLoggedLabel(j){
+  if(!j.dateFound) return "";                          // no data — say nothing rather than guess
+  var p=j.dateFound.split("-");
+  var d=new Date(Date.UTC(+p[0], +p[1]-1, +p[2], 12)); // UTC noon → same calendar day in Phoenix
+  var opts={timeZone:"America/Phoenix", month:"short", day:"numeric"};
+  if(p[0]!==todayIsoAZ().slice(0,4)) opts.year="numeric";
+  return "Logged "+new Intl.DateTimeFormat(undefined,opts).format(d);
+}
+
+function todayCard(j){
+  var chips="";
+  if(j.lane)     chips+='<span class="tj-chip">'+esc(j.lane)+'</span>';
+  if(j.workMode) chips+='<span class="tj-chip">'+esc(j.workMode)+'</span>';
+  if(j.comp)     chips+='<span class="tj-chip tj-chip--comp">'+esc(j.comp)+'</span>';
+
+  var u=safeUrl(j.link);
+  var posting=u?'<a class="tj-link" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">View posting '+EXT_ICON+'</a>':'';
+  var logged=todayLoggedLabel(j);
+
+  return '<article class="tj-card" id="tj-'+j.id+'">'+
+    '<div class="tj-head">'+
+      monogram(j.company)+
+      '<div class="tj-title">'+
+        '<div class="tj-co">'+esc(j.company)+
+          (todayIsNew(j)?' <span class="tj-new">New today</span>':'')+'</div>'+
+        '<div class="tj-role">'+esc(j.role)+'</div>'+
+      '</div>'+
+      (j.fit?'<span class="tj-fit" title="Fit — tool-assessed"><span class="dot"></span>'+j.fit+'/5</span>':'')+
+    '</div>'+
+    (chips?'<div class="tj-chips">'+chips+'</div>':'')+
+    (j.fitRead?'<div class="tj-read">'+mdToHtml(j.fitRead)+'</div>':'')+
+    '<div class="tj-foot">'+
+      posting+
+      '<div class="tj-actions">'+
+        '<span class="edit-status" id="tj-status-'+j.id+'"></span>'+
+        '<button type="button" class="tj-btn tj-btn--close" onclick="todayClose(\''+j.id+'\')">Close</button>'+
+        '<button type="button" class="tj-btn tj-btn--pursue" onclick="todayPursue(\''+j.id+'\')">Pursue</button>'+
+      '</div>'+
+    '</div>'+
+    (logged?'<div class="tj-logged">'+esc(logged)+'</div>':'')+
+  '</article>';
+}
+
+function renderToday(){
+  if(!JOBS_LOADED){
+    document.getElementById("today-body").innerHTML='<div class="empty">Loading today’s jobs…</div>';
+    return;
+  }
+  var rows=todayJobs();
+  var fresh=rows.filter(todayIsNew).length;
+  document.getElementById("today-sub").textContent = rows.length
+    ? rows.length+" saved "+(rows.length===1?"role":"roles")+" to triage"+(fresh?" · "+fresh+" new today":"")
+    : "Nothing left to triage — the queue is clear.";
+  document.getElementById("today-body").innerHTML = rows.length
+    ? rows.map(todayCard).join("")
+    : '<div class="empty">No saved roles waiting. New finds land here as the mine runs.</div>';
+}
+
+function showToday(){
+  showView("today");
+  document.getElementById("view-today").classList.remove("hidden");
+  window.scrollTo(0,0);
+  renderToday();
+}
+function todayBack(){ showView("dashboard"); window.scrollTo(0,0); }
+
+/* Retire a card once its decision is written: confirm, fade, then re-render
+   so the counts and the remaining queue stay honest. */
+function todayRetire(id,msg){
+  flashStatus("tj-status-"+id,msg,"ok");
+  var el=document.getElementById("tj-"+id);
+  if(!el){ renderToday(); return; }
+  el.classList.add("tj-done");
+  setTimeout(renderToday,900);
+}
+function todayBusy(id,on){
+  var el=document.getElementById("tj-"+id);
+  if(el) el.classList.toggle("tj-busy",!!on);
+}
+
+async function todayPursue(id){
+  var job=getJobs().filter(function(x){return x.id===id;})[0];
+  if(!job) return;
+  todayBusy(id,true);
+  flashStatus("tj-status-"+id,"Saving…","");
+  try{
+    var data=await postUpdate({id:id, pursue:true});
+    job.pursue=!!data.pursue;
+    renderDashboard();
+    todayRetire(id,"Pursuing ✓ queued for enrichment");
+  }catch(err){
+    todayBusy(id,false);
+    flashStatus("tj-status-"+id,"Couldn't pursue: "+err.message,"err");
+  }
+}
+
+/* Close uses the same atomic closeReason path as the detail view: Stage→Closed,
+   Pursue→false, Next Action cleared, and an append-only dated note. Nothing is
+   ever deleted — the closed row stays as dedupe memory for the mine. */
+async function todayClose(id){
+  var job=getJobs().filter(function(x){return x.id===id;})[0];
+  if(!job) return;
+  todayBusy(id,true);
+  flashStatus("tj-status-"+id,"Saving…","");
+  try{
+    var data=await postUpdate({id:id, closeReason:"Triaged out on the daily pass"});
+    job.stage=data.stage; job.pursue=!!data.pursue; job.notes=data.notes;
+    job.nextAction=data.nextAction||"";
+    renderDashboard();
+    todayRetire(id,"Closed ✓");
+  }catch(err){
+    todayBusy(id,false);
+    flashStatus("tj-status-"+id,"Couldn't close: "+err.message,"err");
+  }
+}
 
 document.getElementById("closedToggle").addEventListener("click",function(){
   this.classList.toggle("on");
