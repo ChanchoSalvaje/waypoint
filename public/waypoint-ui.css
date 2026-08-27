@@ -562,3 +562,137 @@ footer{margin-top:28px;text-align:center;color:var(--faint);font-size:12px}
   .tj-actions{width:100%;margin-left:0;justify-content:flex-end}
   .tj-btn{flex:1;text-align:center}
 }
+
+/* ============================================================
+   OPPORTUNITY ROW — EXPAND IN PLACE (the decision brief)
+   A row is a summary; the panel beneath it is the evidence. Built so a
+   decision can be made without navigating away or losing queue position.
+   Tokens only — no new hex; everything below resolves to DESIGN.md.
+   ============================================================ */
+
+/* Each row now sits in a group wrapper so its panel can live directly under it.
+   The divider moves to the group: the older `.row:first-child` rule would
+   otherwise strip the top hairline from EVERY row, since each is now first in
+   its own wrapper. */
+.listcard .opp-group>.row{border-top:1px solid var(--line)}
+.listcard .opp-group:first-child>.row{border-top:none}
+.listcard .row:focus-visible{outline:2px solid var(--voltage);outline-offset:-2px}
+
+/* The expanded row: a quiet copper rail and a warm fill — "you are here",
+   not a spotlight. */
+.opp-group.is-expanded{background:var(--surface);box-shadow:inset 3px 0 0 var(--voltage)}
+.opp-group.is-expanded>.row{background:var(--panel)}
+
+/* Caret: points down at rest, up when open. */
+.opp-caret{display:inline-block;flex:0 0 auto;color:var(--faint);font-size:19px;line-height:1;
+  transform:rotate(90deg);transition:transform .22s ease}
+.opp-group.is-expanded>.row .opp-caret{transform:rotate(-90deg);color:var(--voltage)}
+
+/* Comp provenance (RULE 2) — a guessed number must never look like a posted one.
+   Posted reads in normal ink; estimated is muted throughout. */
+.comp{white-space:nowrap}
+.comp-mark{margin-right:4px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.comp--posted{color:var(--ink);font-weight:500}
+.comp--est{color:var(--muted);font-weight:400}
+.meta .meta-comp{color:var(--muted)}
+/* `.meta span{display:block}` above would otherwise turn the provenance mark into
+   its own line, splitting "✓" off the number it qualifies. Keep them inline. */
+.meta .meta-comp .comp,.meta .meta-comp .comp-mark{display:inline;white-space:nowrap}
+
+/* ---- the panel itself ----
+   0fr → 1fr on a grid row animates to the content's natural height without
+   guessing a max-height. Quiet: .22s ease, no bounce, no overshoot. */
+.opp-panel{display:grid;grid-template-rows:0fr;opacity:0;
+  transition:grid-template-rows .22s ease,opacity .22s ease}
+.opp-panel.is-open{grid-template-rows:1fr;opacity:1}
+.opp-panel-in{overflow:hidden;min-height:0}
+.opp-panel.is-open>.opp-panel-in{padding:2px 20px 18px 22px}
+@media (prefers-reduced-motion:reduce){.opp-panel{transition:none}}
+
+/* section headings — the app's small letter-spaced instrument label */
+.opp-sec{margin-top:16px}
+.opp-sec-h{font-size:11px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--steel-2);margin:0 0 7px;display:flex;align-items:center;gap:10px}
+
+/* RULE 3 — the fit badge lives in the Fit read heading, so the score and the
+   narrative behind it can never be seen apart. */
+.opp-fit{display:inline-flex;align-items:center;gap:5px;
+  background:var(--surface);border:1px solid var(--line);border-radius:999px;
+  padding:2px 9px;font-size:11.5px;font-weight:700;letter-spacing:0;
+  color:var(--ink);text-transform:none;white-space:nowrap}
+.opp-fit .dot{width:6px;height:6px;border-radius:50%;background:var(--voltage);flex:none}
+
+/* Fit read leads the panel, so it carries slightly more presence than the rest. */
+.opp-md .md-p,.opp-md .md-ul li{font-size:13.5px;line-height:1.55}
+.opp-lead .md-p,.opp-lead .md-ul li{font-size:14px;color:var(--ink)}
+.opp-md .md-h{font-size:12px;margin-top:12px}
+
+/* RULE 1 — never render silence. An empty field says what its emptiness means,
+   in the same ink as a real answer so it reads as information, not as absence. */
+.opp-empty{margin:0;font-size:13.5px;font-style:italic;color:var(--muted);
+  border-left:2px solid var(--line);padding:2px 0 2px 10px}
+.opp-empty--sm{font-size:12.5px;color:var(--faint)}
+.opp-empty-inline{font-style:italic;color:var(--muted);font-size:13px}
+
+/* Company background — collapsed by default when there IS a dossier. */
+.opp-details{margin-top:16px}
+.opp-details summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}
+.opp-details summary::-webkit-details-marker{display:none}
+.opp-details summary .opp-sec-h{margin:0}
+.opp-details summary:hover .opp-sec-h{color:var(--voltage-deep)}
+.opp-caret--sm{font-size:15px;color:var(--faint)}
+.opp-details[open] .opp-caret--sm{transform:rotate(-90deg)}
+.opp-details-body{margin-top:9px;padding-left:11px;border-left:2px solid var(--line)}
+
+/* the four facts — comp, work mode, lane, logged */
+.opp-facts{display:flex;flex-wrap:wrap;gap:9px 26px;margin:18px 0 0;
+  padding:12px 14px;background:var(--panel);border-radius:10px}
+.opp-fact dt{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 3px}
+.opp-fact dd{margin:0;font-size:13.5px;color:var(--ink);line-height:1.4}
+
+/* Apply vs posting: two different things, kept visually distinct on purpose. */
+.opp-links{display:flex;align-items:center;flex-wrap:wrap;gap:10px 16px;margin-top:16px}
+.opp-apply{display:inline-flex;align-items:center;gap:7px;background:var(--voltage);
+  color:var(--on-dark);font-weight:650;font-size:13.5px;text-decoration:none;
+  padding:9px 17px;border-radius:9px;transition:background .15s ease}
+.opp-apply:hover{background:var(--voltage-deep)}
+.opp-posting{display:inline-flex;align-items:center;gap:5px;color:var(--steel-2);
+  font-size:12.5px;text-decoration:none}
+.opp-posting:hover{color:var(--ink);text-decoration:underline}
+.opp-posting .ext-ico{width:13px;height:13px}
+
+/* History — the dated append-only log. Quiet, small, and capped so a long
+   provenance trail can never push the decision buttons off the screen. */
+.opp-notes{margin-top:18px;padding-top:13px;border-top:1px solid var(--line)}
+.opp-notes-h{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 6px}
+.opp-notes-body{font-size:12px;line-height:1.55;color:var(--muted);white-space:pre-wrap;
+  max-height:132px;overflow-y:auto}
+
+/* the two decisions, repeated at the foot so nobody scrolls back up to decide */
+.opp-actions{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-top:16px}
+.opp-detail-link{font:inherit;font-size:12.5px;color:var(--steel-2);background:none;
+  border:none;padding:0;cursor:pointer;text-align:left}
+.opp-detail-link:hover{color:var(--ink);text-decoration:underline}
+.opp-actions .edit-status{font-size:12px;margin-left:auto}
+.opp-btn{font:inherit;font-size:13px;font-weight:500;padding:8px 18px;border-radius:9px;
+  cursor:pointer;border:1px solid transparent;
+  transition:background .15s ease,border-color .15s ease,color .15s ease}
+.opp-btn:focus-visible{outline:2px solid var(--voltage);outline-offset:2px}
+/* Pursue — the primary action, Ember Copper per DESIGN.md */
+.opp-btn--pursue{background:var(--voltage);color:var(--on-dark)}
+.opp-btn--pursue:hover{background:var(--voltage-deep)}
+/* already pursuing: still copper, but stated rather than urged */
+.opp-btn--pursue.is-on{background:var(--voltage-soft);color:var(--voltage-deep);
+  border-color:var(--voltage-line)}
+.opp-btn--pursue.is-on:hover{background:var(--voltage-line)}
+/* Close — muted clay-gray; a close is routine, not a failure */
+.opp-btn--close{background:var(--surface);color:var(--closed);border-color:var(--line)}
+.opp-btn--close:hover{background:var(--panel);color:var(--muted)}
+
+@media (max-width:640px){
+  .opp-panel.is-open>.opp-panel-in{padding:2px 15px 16px 16px}
+  .opp-facts{gap:9px 18px}
+  .opp-actions .edit-status{margin-left:0;width:100%;order:9}
+}

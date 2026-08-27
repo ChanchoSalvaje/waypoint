@@ -24,7 +24,8 @@ const FIELDS = {
   workMode:       "fldYTT2ylx7e87wo9", // Work Mode (singleSelect)
   nextAction:     "fldQjbPglCq07XJJD", // Next Action
   nextActionDate: "fldN1P81pvY2xNl4C", // Next Action Date (date)
-  link:           "fldpNcqFRnN7zMzzO", // Link
+  link:           "fldpNcqFRnN7zMzzO", // Link — the posting URL (where the role was seen)
+  applyLink:      "fldOs9Wbffy1YrABV", // Apply Link (url) — the direct employer/ATS apply URL
   source:         "fldVtN8Rdj3b1yDML", // Source (singleSelect)
   pursue:         "fldk41nshQmCXHanE", // Pursue (checkbox) — queues the job for enrichment
   fitRead:        "fldQEgL4DABbkFEK5", // Fit Read — the scorer's plain-language rationale
@@ -52,6 +53,11 @@ function mapRecord(record) {
     nextAction:     f[FIELDS.nextAction] || "",
     nextActionDate: f[FIELDS.nextActionDate] || "",
     link:           f[FIELDS.link] || "",
+    // Apply Link and Link are DIFFERENT things and must stay separate: applyLink is
+    // the employer/ATS apply path the enrichment run resolves; link is wherever the
+    // posting was first seen. Never fall one back to the other — a missing apply URL
+    // is information (it means "needs verification"), not something to paper over.
+    applyLink:      f[FIELDS.applyLink] || "",
     source:         f[FIELDS.source] || "",
     pursue:         !!f[FIELDS.pursue],   // checkbox → boolean (unchecked comes back undefined)
     fitRead:        f[FIELDS.fitRead] || "",

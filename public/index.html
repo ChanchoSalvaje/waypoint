@@ -275,21 +275,254 @@ function renderDashboard(){
     var d=STAGE_ORDER.indexOf(a.stage)-STAGE_ORDER.indexOf(b.stage);
     return d!==0?d:(b.fit||0)-(a.fit||0);
   });
-  document.getElementById("list").innerHTML=rows.map(function(j){
-    return '<div class="row" onclick="openDetail(\''+j.id+'\')">'+
+  document.getElementById("list").innerHTML=rows.map(oppRow).join("");
+  syncExpandedPanel();
+}
+function tile(k,v){ return '<div class="card kpi"><div class="lbl">'+k+'</div><div class="num">'+v+'</div></div>'; }
+
+/* ============================================================
+   OPPORTUNITY ROW — EXPAND IN PLACE
+   A row is a summary; the panel below it is the decision brief. Clicking a
+   row expands it in place (one at a time) so a decision can be made without
+   navigating away and losing your position in the queue.
+
+   The three rules this panel exists to enforce:
+     1. NEVER RENDER SILENCE — an empty field says what its emptiness means.
+        Blank space reads as "nothing to see here", which is the exact bug
+        this build fixes.
+     2. COMP CARRIES ITS PROVENANCE — a guessed number must never look like a
+        posted one (see compHtml below).
+     3. THE FIT SCORE IS NEVER MORE THAN ONE CLICK FROM ITS FIT READ — the badge
+        is a summary of the narrative, not evidence on its own, so the panel
+        leads with Fit Read and carries the badge in that same heading.
+
+   READ-ONLY except for the two writes that already existed: Pursue and Close.
+   No new write operations are introduced here.
+   ============================================================ */
+
+var EXPANDED_ID=null;      // the one row currently expanded (null = none)
+var EXPAND_ANIMATE=false;  // true for the render that opens a panel, so it transitions
+
+/* One Opportunities row, plus its brief when this is the expanded one. */
+function oppRow(j){
+  var open=(EXPANDED_ID===j.id);
+  return '<div class="opp-group'+(open?" is-expanded":"")+'">'+
+    '<div class="row" id="opp-row-'+j.id+'" role="button" tabindex="0"'+
+      ' aria-expanded="'+(open?"true":"false")+'" aria-controls="opp-panel-'+j.id+'"'+
+      ' onclick="toggleExpand(\''+j.id+'\')" onkeydown="oppRowKey(event,\''+j.id+'\')">'+
       monogram(j.company)+
       '<div class="row-main"><div class="co">'+esc(j.company)+'</div><div class="role">'+esc(j.role)+'</div></div>'+
-      '<div class="meta"><span title="'+esc(j.comp||"")+'">'+esc(j.comp||"—")+'</span><span title="'+esc(j.workMode||"")+'">'+esc(j.workMode||"")+'</span></div>'+
+      '<div class="meta">'+
+        '<span class="meta-comp" title="'+esc(j.comp||"")+'">'+(compHtml(j.comp)||"&mdash;")+'</span>'+
+        '<span title="'+esc(j.workMode||"")+'">'+esc(j.workMode||"")+'</span>'+
+      '</div>'+
       '<div class="right">'+
         pursueToggle(j,"row")+
         closeToggle(j,"row")+
         (j.fit?'<span class="fit"><span class="dot"></span>'+j.fit+'/5</span>':'')+
         stageBadge(j)+
-        linkIcon(j)+
-      '</div></div>';
-  }).join("");
+        oppRowLink(j)+
+        '<span class="opp-caret" aria-hidden="true">&rsaquo;</span>'+
+      '</div>'+
+    '</div>'+
+    (open?oppPanel(j):"")+
+  '</div>';
 }
-function tile(k,v){ return '<div class="card kpi"><div class="lbl">'+k+'</div><div class="num">'+v+'</div></div>'; }
+
+/* Enter / Space open the row, the same as a click. Space would otherwise scroll. */
+function oppRowKey(e,id){
+  if(e.key==="Enter"||e.key===" "||e.key==="Spacebar"){ e.preventDefault(); toggleExpand(id); }
+}
+
+/* Expand one row (collapsing whatever was open), or collapse the open one. */
+function toggleExpand(id){
+  if(EXPANDED_ID===id){ collapseExpanded(); return; }
+  EXPANDED_ID=id;
+  EXPAND_ANIMATE=true;
+  renderKeepingPlace(id);
+}
+
+/* Collapse with the same quiet animation, then re-render once it has finished. */
+function collapseExpanded(){
+  var id=EXPANDED_ID;
+  if(!id) return;
+  EXPANDED_ID=null;
+  var panel=document.getElementById("opp-panel-"+id);
+  var row=document.getElementById("opp-row-"+id);
+  if(row) row.setAttribute("aria-expanded","false");
+  if(!panel){ renderDashboard(); return; }
+  panel.classList.remove("is-open");
+  setTimeout(function(){ if(EXPANDED_ID===null) renderDashboard(); }, 240);
+}
+
+/* Re-render the board WITHOUT losing your place: a panel opening or closing above
+   the row you clicked would otherwise slide it up or down the viewport. We pin the
+   clicked row to the same screen position it had before the re-render. */
+function renderKeepingPlace(anchorId){
+  var el=document.getElementById("opp-row-"+anchorId);
+  var before=el?el.getBoundingClientRect().top:null;
+  renderDashboard();
+  if(before===null) return;
+  var after=document.getElementById("opp-row-"+anchorId);
+  if(!after) return;
+  var delta=after.getBoundingClientRect().top-before;
+  if(delta) window.scrollBy(0,delta);
+}
+
+/* Run after every board render. The panel markup is emitted already-open on an
+   ordinary re-render (a Pursue tick, say) so state refreshes don't replay the
+   animation; only a fresh expand gets the class added on the next frame, which
+   is what makes it transition. */
+function syncExpandedPanel(){
+  if(!EXPANDED_ID) return;
+  var panel=document.getElementById("opp-panel-"+EXPANDED_ID);
+  if(!panel){ EXPANDED_ID=null; return; }   // the row left the list (closed, or filtered out)
+  if(!EXPAND_ANIMATE) return;
+  EXPAND_ANIMATE=false;
+  requestAnimationFrame(function(){
+    var p=EXPANDED_ID?document.getElementById("opp-panel-"+EXPANDED_ID):null;
+    if(p) p.classList.add("is-open");
+  });
+}
+
+/* ---- RULE 2: comp provenance ----------------------------------------------
+   Comp values arrive prefixed "✓" (posted by the employer, verified) or "~"
+   (estimated). That prefix is the difference between a fact and a guess, so it
+   is preserved and styled, never stripped: "✓" reads in normal ink, "~ Est."
+   in muted text. A value with neither prefix is rendered as-is and claims
+   nothing. "Est." is only added when the value doesn't already say it, so
+   "~ Est. $200K–$300K TC" never becomes "~ Est. Est. …". */
+function compParts(raw){
+  var t=(raw||"").trim();
+  if(!t) return null;
+  if(t.charAt(0)==="✓") return {kind:"posted", mark:"✓", text:t.slice(1).trim()};
+  if(t.charAt(0)==="~"){
+    var rest=t.slice(1).trim();
+    if(!/^est/i.test(rest)) rest="Est. "+rest;
+    return {kind:"est", mark:"~", text:rest};
+  }
+  return {kind:"plain", mark:"", text:t};
+}
+function compHtml(raw){
+  var c=compParts(raw);
+  if(!c) return "";
+  if(c.kind==="plain") return '<span class="comp">'+esc(c.text)+'</span>';
+  var tip=c.kind==="posted"?"Posted by the employer — verified":"Estimated — not posted by the employer";
+  return '<span class="comp comp--'+c.kind+'" title="'+esc(tip)+'">'+
+    '<span class="comp-mark" aria-hidden="true">'+c.mark+'</span>'+esc(c.text)+'</span>';
+}
+
+/* ---- RULE 1: an empty field states what its emptiness means ---------------- */
+function oppEmpty(msg){ return '<p class="opp-empty">'+esc(msg)+'</p>'; }
+
+function oppSection(title,bodyHtml,tail){
+  return '<section class="opp-sec"><h4 class="opp-sec-h">'+esc(title)+(tail||"")+'</h4>'+bodyHtml+'</section>';
+}
+
+/* The apply URL if we have one, else the posting URL. The row icon should never
+   go missing just because the two fields carry different halves of the story. */
+function oppRowLink(j){
+  var a=safeUrl(j.applyLink);
+  if(a) return '<a class="ext-link" href="'+esc(a)+'" target="_blank" rel="noopener noreferrer" title="Open the apply page" aria-label="Open the apply page" onclick="event.stopPropagation()">'+EXT_ICON+'</a>';
+  return linkIcon(j);
+}
+
+function oppPanel(j){
+  return '<div class="opp-panel'+(EXPAND_ANIMATE?"":" is-open")+'" id="opp-panel-'+j.id+'">'+
+    '<div class="opp-panel-in">'+
+      oppFitRead(j)+
+      oppEdge(j)+
+      oppBackground(j)+
+      oppFacts(j)+
+      oppLinks(j)+
+      oppNotes(j)+
+      oppActions(j)+
+    '</div>'+
+  '</div>';
+}
+
+/* RULE 3 — the score and the narrative that produced it share one heading. */
+function oppFitRead(j){
+  var badge=j.fit?'<span class="opp-fit" title="Fit — tool-assessed"><span class="dot"></span>'+j.fit+'/5</span>':'';
+  var body=(j.fitRead&&j.fitRead.trim())
+    ? '<div class="md-scope opp-md opp-lead">'+mdToHtml(j.fitRead)+'</div>'
+    : oppEmpty("No fit read yet — nothing here explains this score.");
+  return oppSection("Fit read", body, badge);
+}
+
+function oppEdge(j){
+  var t=(j.prep&&j.prep.edge||"").trim();
+  return oppSection("Role shape, angle, watch-outs",
+    t?'<div class="md-scope opp-md">'+mdToHtml(t)+'</div>':oppEmpty("No role detail yet."));
+}
+
+/* Collapsed behind a toggle when there IS a dossier; when there isn't, the
+   emptiness is stated in the open — hiding "Not yet enriched." behind a closed
+   toggle would be exactly the silence this panel exists to break. */
+function oppBackground(j){
+  var t=(j.prep&&j.prep.background||"").trim();
+  if(!t) return oppSection("Company background", oppEmpty("Not yet enriched."));
+  return '<details class="opp-details">'+
+    '<summary><span class="opp-sec-h">Company background</span><span class="opp-caret opp-caret--sm" aria-hidden="true">&rsaquo;</span></summary>'+
+    '<div class="md-scope opp-md opp-details-body">'+mdToHtml(t)+'</div>'+
+  '</details>';
+}
+
+function oppFacts(j){
+  function fact(k,v){ return '<div class="opp-fact"><dt>'+esc(k)+'</dt><dd>'+v+'</dd></div>'; }
+  function plain(v,fallback){
+    var t=(v||"").trim();
+    return t?esc(t):'<span class="opp-empty-inline">'+esc(fallback)+'</span>';
+  }
+  var comp=compHtml(j.comp)||'<span class="opp-empty-inline">No comp captured.</span>';
+  var logged=todayLoggedLabel(j);
+  return '<dl class="opp-facts">'+
+    fact("Comp",comp)+
+    fact("Work mode",plain(j.workMode,"Not stated."))+
+    fact("Lane",plain(j.lane,"Unassigned."))+
+    fact("Logged",logged?esc(logged):'<span class="opp-empty-inline">Not recorded.</span>')+
+  '</dl>';
+}
+
+/* Apply Link and Link are different things and stay visually distinct: the apply
+   path is the copper button, the posting is a quiet secondary link. With neither,
+   say so — a missing apply URL is a real state that needs verification. */
+function oppLinks(j){
+  var apply=safeUrl(j.applyLink), post=safeUrl(j.link);
+  if(!apply&&!post) return '<div class="opp-links">'+oppEmpty("No link captured — needs verification.")+'</div>';
+  var out='<div class="opp-links">';
+  if(apply) out+='<a class="opp-apply" href="'+esc(apply)+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Apply <span aria-hidden="true">&rarr;</span></a>';
+  if(post)  out+='<a class="opp-posting" href="'+esc(post)+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">View the posting '+EXT_ICON+'</a>';
+  if(!apply) out+='<span class="opp-empty-inline">No direct apply link resolved yet.</span>';
+  return out+'</div>';
+}
+
+function oppNotes(j){
+  var t=(j.notes||"").trim();
+  return '<section class="opp-notes">'+
+    '<h5 class="opp-notes-h">History</h5>'+
+    (t?'<div class="opp-notes-body">'+esc(t)+'</div>'
+      :'<p class="opp-empty opp-empty--sm">No history logged yet.</p>')+
+  '</section>';
+}
+
+/* The same two writes that already exist on the row, repeated at the foot of the
+   panel so a decision never means scrolling back up. No new write path. */
+function oppActions(j){
+  var closed=(j.stage==="Closed");
+  var pursuing=!!j.pursue;
+  var close=closed
+    ? '<button type="button" class="opp-btn opp-btn--close" onclick="event.stopPropagation();openReopenDialog(\''+j.id+'\',false)">Reopen</button>'
+    : '<button type="button" class="opp-btn opp-btn--close" onclick="event.stopPropagation();openCloseDialog(\''+j.id+'\')">Close</button>';
+  return '<div class="opp-actions">'+
+    '<button type="button" class="opp-detail-link" onclick="event.stopPropagation();openDetail(\''+j.id+'\')">Open full detail <span aria-hidden="true">&rarr;</span></button>'+
+    '<span class="edit-status" id="opp-status-'+j.id+'"></span>'+
+    close+
+    '<button type="button" class="opp-btn opp-btn--pursue'+(pursuing?" is-on":"")+'"'+
+      ' onclick="event.stopPropagation();togglePursue(\''+j.id+'\','+(pursuing?"false":"true")+',\'opp-status-'+j.id+'\')">'+
+      (pursuing?"Pursuing ✓":"Pursue")+'</button>'+
+  '</div>';
+}
 
 /* ---- Display-only: company-initial monogram avatar ----
    Same company always maps to the same palette tint (stable hash),
@@ -344,9 +577,12 @@ function syncPursueUI(id){
   var dv=document.getElementById("view-detail");
   if(dv && !dv.classList.contains("hidden") && CURRENT_DETAIL){ rerenderDetail(CURRENT_DETAIL); }
 }
-async function togglePursue(id, want){
+async function togglePursue(id, want, statusId){
   var job=getJobs().filter(function(x){return x.id===id;})[0];
   if(!job) return;
+  // Which status line gets the feedback. Defaults to the detail card's; the
+  // expanded row passes its own, so a Pursue from the board reports on the board.
+  statusId=statusId||"pursue-status";
   if(want && job.stage==="Closed"){
     // Can't pursue a closed role — prompt to reopen (and turn Pursue on) instead.
     openReopenDialog(id, true);
@@ -360,11 +596,11 @@ async function togglePursue(id, want){
     var data=await postUpdate({id:id, pursue:want});
     job.pursue=!!data.pursue;       // reconcile with the server's confirmed value
     syncPursueUI(id);
-    flashStatus("pursue-status", want?"Pursue on ✓":"Pursue off ✓", "ok");
+    flashStatus(statusId, want?"Pursue on ✓":"Pursue off ✓", "ok");
   }catch(err){
     job.pursue=prev;                // revert BOTH row + card together
     syncPursueUI(id);
-    flashStatus("pursue-status","Couldn't update Pursue: "+err.message,"err");
+    flashStatus(statusId,"Couldn't update Pursue: "+err.message,"err");
   }
 }
 
