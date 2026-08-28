@@ -696,3 +696,14 @@ footer{margin-top:28px;text-align:center;color:var(--faint);font-size:12px}
   .opp-facts{gap:9px 18px}
   .opp-actions .edit-status{margin-left:0;width:100%;order:9}
 }
+
+/* ---- Apply / posting on the DETAIL view's facts strip ----
+   Same two links as the board panel, sized to sit beside "Check comp →". */
+.opp-apply--sm{font-size:12.5px;font-weight:600;padding:7px 15px;border-radius:8px;gap:6px}
+.facts .opp-posting{font-size:12.5px}
+/* The honest empty state, as a facts-strip pill. A dashed hairline reads as
+   "something belongs here and isn't" — informative, not alarming. A close is
+   routine and so is a missing URL; neither is a failure. */
+.link-missing{display:inline-flex;align-items:center;font-size:12px;font-style:italic;
+  color:var(--muted);background:transparent;border:1px dashed var(--line);
+  border-radius:999px;padding:6px 13px}

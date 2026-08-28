@@ -488,13 +488,13 @@ function oppFacts(j){
    path is the copper button, the posting is a quiet secondary link. With neither,
    say so — a missing apply URL is a real state that needs verification. */
 function oppLinks(j){
-  var apply=safeUrl(j.applyLink), post=safeUrl(j.link);
-  if(!apply&&!post) return '<div class="opp-links">'+oppEmpty("No link captured — needs verification.")+'</div>';
-  var out='<div class="opp-links">';
-  if(apply) out+='<a class="opp-apply" href="'+esc(apply)+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Apply <span aria-hidden="true">&rarr;</span></a>';
-  if(post)  out+='<a class="opp-posting" href="'+esc(post)+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">View the posting '+EXT_ICON+'</a>';
-  if(!apply) out+='<span class="opp-empty-inline">No direct apply link resolved yet.</span>';
-  return out+'</div>';
+  var L=jobLinks(j);
+  if(!L.apply && !L.posting) return '<div class="opp-links">'+oppEmpty(NO_LINK_MSG)+'</div>';
+  return '<div class="opp-links">'+
+    (L.apply   ? applyBtn(L.apply,"opp-apply") : "")+
+    (L.posting ? postingBtn(L.posting) : "")+
+    (L.apply   ? "" : '<span class="opp-empty-inline">'+esc(NO_APPLY_MSG)+'</span>')+
+  '</div>';
 }
 
 function oppNotes(j){
@@ -552,9 +552,22 @@ function linkIcon(j){
   var u=safeUrl(j.link); if(!u) return "";
   return '<a class="ext-link" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" title="Open posting" aria-label="Open posting" onclick="event.stopPropagation()">'+EXT_ICON+'</a>';
 }
-function linkButton(j){
-  var u=safeUrl(j.link); if(!u) return "";
-  return '<a class="posting-btn" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">Open application <span aria-hidden="true">&rarr;</span></a>';
+/* ---- Apply Link vs Link — ONE source of truth, shared by the board panel and
+   the detail view so the two can never drift or disagree about what is missing.
+   Apply Link is the employer/ATS apply path; Link is wherever the posting was
+   seen. Different things, kept visually distinct, and neither falls back to the
+   other. Replaces the old linkButton(), which read ONLY j.link and returned an
+   empty string when it was blank — so a row with a live Apply Link but no
+   posting URL (GitLab) rendered no button at all, and a row with neither
+   (Dynata) rendered nothing to say so. That was the same silence bug. */
+var NO_LINK_MSG = "No link captured — needs verification.";
+var NO_APPLY_MSG = "No direct apply link resolved yet.";
+function jobLinks(j){ return { apply: safeUrl(j.applyLink), posting: safeUrl(j.link) }; }
+function applyBtn(u, cls){
+  return '<a class="'+cls+'" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Apply <span aria-hidden="true">&rarr;</span></a>';
+}
+function postingBtn(u){
+  return '<a class="opp-posting" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">View the posting '+EXT_ICON+'</a>';
 }
 
 /* ---- Pursue toggle (writes via update-job; queues the job for enrichment) ----
@@ -626,7 +639,7 @@ function openDetail(id, noScroll){
     '<div class="detail-head"><div class="detail-head-text">'+
       '<h1>'+esc(j.role)+'</h1>'+
       '<div class="sub"><b>'+esc(j.company)+'</b></div>'+
-    '</div>'+linkButton(j)+'</div>'+
+    '</div></div>'+
     glance(j)+
     nextStepBand(j)+
     prepDossier(p)+
@@ -653,11 +666,24 @@ function glance(j){
     stageBadge(j)+
     '<span class="fact">Fit'+helpDot("fit")+' <b>'+(j.fit?esc(j.fit+"/5"):"—")+'</b></span>'+
     '<span class="fact">Excitement'+helpDot("exc")+' '+excitementControl(j)+'</span>'+
-    '<span class="fact" title="'+esc(j.comp||"")+'"><b>Comp</b> <span class="fval">'+esc(j.comp||"—")+'</span></span>'+
+    '<span class="fact" title="'+esc(j.comp||"")+'"><b>Comp</b> <span class="fval">'+(compHtml(j.comp)||"—")+'</span></span>'+
     '<span class="fact" title="'+esc(j.workMode||"")+'"><b>Work mode</b> <span class="fval">'+esc(j.workMode||"—")+'</span></span>'+
     '<span class="fact" title="'+esc(j.source||"")+'"><b>Source</b> <span class="fval">'+esc(j.source||"—")+'</span></span>'+
     '<button type="button" class="btn-ghost" onclick="showComp()">Check comp &rarr;</button>'+
+    detailLinks(j)+
   '</div>';
+}
+
+/* Apply / posting on the detail view, sitting with "Check comp →" in the facts
+   strip. Same rule as the board panel: the apply path is the copper button, the
+   posting is a quiet link, and with neither we state what the emptiness means
+   rather than rendering nothing at all. */
+function detailLinks(j){
+  var L=jobLinks(j);
+  if(!L.apply && !L.posting) return '<span class="link-missing">'+esc(NO_LINK_MSG)+'</span>';
+  return (L.apply   ? applyBtn(L.apply,"opp-apply opp-apply--sm") : "")+
+         (L.posting ? postingBtn(L.posting) : "")+
+         (L.apply   ? "" : '<span class="link-missing">'+esc(NO_APPLY_MSG)+'</span>');
 }
 function nextStepBand(j){
   var val=(j.nextAction||"").trim();
