@@ -707,3 +707,15 @@ footer{margin-top:28px;text-align:center;color:var(--faint);font-size:12px}
 .link-missing{display:inline-flex;align-items:center;font-size:12px;font-style:italic;
   color:var(--muted);background:transparent;border:1px dashed var(--line);
   border-radius:999px;padding:6px 13px}
+
+/* ---- Collapsed-row link affordance: apply path vs posting ----
+   Copper means "you can apply from here" everywhere in the app. A posting-only
+   row gets the quiet steel icon instead, so the board can never show the same
+   mark for a resolved apply path and a link that just goes to a job ad. */
+.row-apply{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;
+  background:var(--voltage);color:var(--on-dark);font-size:11px;font-weight:600;
+  letter-spacing:.02em;text-decoration:none;padding:4px 9px;border-radius:999px;
+  white-space:nowrap;transition:background .15s ease}
+.row-apply:hover{background:var(--voltage-deep)}
+.ext-link--posting{color:var(--steel-2)}
+.ext-link--posting:hover{background:var(--panel);color:var(--ink)}

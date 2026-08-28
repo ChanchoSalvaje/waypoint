@@ -419,12 +419,21 @@ function oppSection(title,bodyHtml,tail){
   return '<section class="opp-sec"><h4 class="opp-sec-h">'+esc(title)+(tail||"")+'</h4>'+bodyHtml+'</section>';
 }
 
-/* The apply URL if we have one, else the posting URL. The row icon should never
-   go missing just because the two fields carry different halves of the story. */
+/* Collapsed-row link affordance. Apply Link and Link are different things, so
+   they must NOT look identical on the row — otherwise the board shows the same
+   mark for "you can apply from here" and "there's only a posting to read", which
+   is the row telling you the opposite of what the data says. A resolved apply
+   path gets a copper "Apply" chip; a posting-only row gets the quiet muted icon.
+   Text and shape carry the distinction, not colour alone.
+   With neither field set the row shows nothing and the expanded brief states
+   "No link captured — needs verification." — marking every unresolved row on the
+   board itself would be noise on the one surface that has to stay scannable. */
 function oppRowLink(j){
-  var a=safeUrl(j.applyLink);
-  if(a) return '<a class="ext-link" href="'+esc(a)+'" target="_blank" rel="noopener noreferrer" title="Open the apply page" aria-label="Open the apply page" onclick="event.stopPropagation()">'+EXT_ICON+'</a>';
-  return linkIcon(j);
+  var apply=safeUrl(j.applyLink);
+  if(apply) return '<a class="row-apply" href="'+esc(apply)+'" target="_blank" rel="noopener noreferrer" title="Apply — direct employer/ATS link" onclick="event.stopPropagation()">Apply <span aria-hidden="true">&rarr;</span></a>';
+  var posting=safeUrl(j.link);
+  if(posting) return '<a class="ext-link ext-link--posting" href="'+esc(posting)+'" target="_blank" rel="noopener noreferrer" title="Open the posting — no direct apply link resolved yet" aria-label="Open the posting" onclick="event.stopPropagation()">'+EXT_ICON+'</a>';
+  return "";
 }
 
 function oppPanel(j){
@@ -548,9 +557,11 @@ function safeUrl(u){
   if(/^[a-z][a-z0-9+.\-]*:/i.test(u)) return "";        // other scheme (javascript:, data:, mailto:…) → reject
   return "https://"+u;                                   // schemeless → assume https
 }
+/* Today's next-actions strip. This one always opens a POSTING, so it carries the
+   muted posting treatment — copper is reserved for an apply path app-wide. */
 function linkIcon(j){
   var u=safeUrl(j.link); if(!u) return "";
-  return '<a class="ext-link" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" title="Open posting" aria-label="Open posting" onclick="event.stopPropagation()">'+EXT_ICON+'</a>';
+  return '<a class="ext-link ext-link--posting" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" title="Open posting" aria-label="Open posting" onclick="event.stopPropagation()">'+EXT_ICON+'</a>';
 }
 /* ---- Apply Link vs Link — ONE source of truth, shared by the board panel and
    the detail view so the two can never drift or disagree about what is missing.
