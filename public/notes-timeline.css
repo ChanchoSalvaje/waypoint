@@ -1,0 +1,128 @@
+/* ============================================================
+   ACTIVITY LOG TIMELINE — styles for the Notes field on the job
+   detail view. Rendered by public/notes-timeline.js.
+
+   DISPLAY ONLY. This file styles how stored text is shown. It
+   never changes what Airtable holds.
+
+   Tokens come from waypoint-ui.css (DESIGN.md is the source of
+   truth) — this sheet defines no palette of its own.
+
+   Readability budget, per the brief + DESIGN.md:
+     measure ~70ch · body 15px · line-height 1.55
+     ink #25283D · muted #6B6459 · surface #FCFAF6 · hairline #E3DCCF
+     sentence case · two weights (400 / 500) · warm, not flashy
+   ============================================================ */
+
+.tl-wrap{margin-top:4px}
+.tl-list{list-style:none;margin:0;padding:0}
+.tl-list--earlier.is-hidden{display:none}
+
+/* One entry. Thin left rule, hairline divider between entries. */
+.tl-entry{position:relative;padding:16px 0 16px 18px;border-left:2px solid var(--line)}
+.tl-entry + .tl-entry{border-top:1px solid var(--line)}
+.tl-entry:first-child{padding-top:4px}
+.tl-entry:last-child{padding-bottom:6px}
+
+/* Muted date chip — "Aug 30, 2026". */
+.tl-meta{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.tl-date{
+  display:inline-block;background:var(--panel);color:var(--muted);
+  font-size:11.5px;font-weight:500;line-height:1;letter-spacing:.02em;
+  padding:5px 9px;border-radius:999px;white-space:nowrap;
+}
+.tl-date--none{background:transparent;color:var(--faint);border:1px dashed var(--line)}
+.tl-time,.tl-qual{color:var(--faint);font-weight:400}
+
+/* An entry that OPENS on a label ("COUNCIL READ: pursue, Track B...") shows
+   that label here, beside the date, rather than underneath the sentence it
+   introduces. Same eyebrow treatment as a section label. */
+.tl-lead-lbl{
+  font-size:10.5px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--muted);
+}
+
+/* Headline — medium weight, capped at a readable measure. */
+.tl-headline{
+  margin:0;max-width:70ch;
+  font-size:15.5px;font-weight:500;line-height:1.5;color:var(--ink);
+}
+.tl-cont{color:var(--faint);font-weight:400}
+
+/* Body, collapsed to ~3 lines until "Show more". The fade sits on the
+   card surface colour so the clip reads as intentional, not cut off. */
+.tl-body{margin-top:8px}
+.tl-body.is-clamped{max-height:4.8em;overflow:hidden;position:relative}
+.tl-body.is-clamped::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:1.9em;
+  background:linear-gradient(to bottom,rgba(252,250,246,0),var(--surface));
+  pointer-events:none;
+}
+
+/* A labelled section: muted letter-spaced eyebrow + regular-weight text. */
+.tl-sec{margin:0 0 12px}
+.tl-sec:last-child{margin-bottom:0}
+.tl-lbl{
+  display:block;margin-bottom:3px;
+  font-size:10.5px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--muted);
+}
+.tl-p{margin:0 0 9px;max-width:70ch;font-size:15px;font-weight:400;line-height:1.55;color:var(--ink)}
+.tl-p:last-child{margin-bottom:0}
+
+/* Fallback: an entry with no date marker, shown exactly as stored
+   with its line breaks preserved. */
+.tl-raw{
+  max-width:70ch;white-space:pre-wrap;
+  font-size:15px;font-weight:400;line-height:1.55;color:var(--ink);
+}
+
+/* An all-caps sentence keeps its characters; it just stops shouting. */
+.tl-shout{color:var(--muted);font-weight:400;letter-spacing:.01em}
+
+/* Filenames, requisition ids, record ids. */
+.tl-mono{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:.92em;color:var(--ink);
+  background:var(--panel);border-radius:4px;padding:1px 4px;
+  overflow-wrap:anywhere;
+}
+
+/* Real buttons, visible focus, sufficient contrast. */
+.tl-more,.tl-earlier{
+  display:inline-block;margin-top:8px;padding:4px 0;
+  background:none;border:0;cursor:pointer;
+  font-family:inherit;font-size:13px;font-weight:500;color:var(--voltage-deep);
+  border-bottom:1px solid var(--voltage-line);
+}
+.tl-more:hover,.tl-earlier:hover{border-bottom-color:var(--voltage)}
+.tl-more.is-hidden{display:none}
+.tl-earlier{margin:0 0 12px}
+.tl-more:focus-visible,.tl-earlier:focus-visible{
+  outline:2px solid var(--voltage);outline-offset:3px;border-radius:3px;
+}
+
+/* ============================================================
+   LONG-TEXT READABILITY — the other long fields on the detail
+   view: Company Background & History, Edge Facts, Questions to
+   Ask, Likely Questions & Prep, and the Next Action callout.
+
+   Presentation only — same measure, leading and paragraph
+   spacing as the timeline. Their content is not restructured.
+   Scoped to .prep-content / #nextstep-view so the Today and
+   Signals views keep their own compact sizing.
+   ============================================================ */
+.prep-content .md-p,
+.prep-content .md-ul li,
+.prep-content .prose,
+.prep-content .deflist__item p,
+.prep-content .list-diamond li{max-width:70ch;line-height:1.55}
+.prep-content .md-p{margin-bottom:11px}
+.prep-content .md-h{margin-top:16px}
+.prep-content .deflist__item{padding:14px 0}
+#nextstep-view{max-width:70ch;line-height:1.55}
+
+@media (max-width:560px){
+  .tl-entry{padding-left:13px}
+  .tl-headline{font-size:15px}
+}

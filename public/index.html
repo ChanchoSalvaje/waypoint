@@ -8,6 +8,9 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="/waypoint-ui.css">
+<!-- Activity Log timeline: display-only parser + renderer for the Notes field. -->
+<link rel="stylesheet" href="/notes-timeline.css">
+<script src="/notes-timeline.js"></script>
 </head>
 <body>
 
@@ -655,7 +658,12 @@ function openDetail(id, noScroll){
     nextStepBand(j)+
     prepDossier(p)+
     statusActivity(j);
-  showView("detail"); if(!noScroll) window.scrollTo(0,0);
+  showView("detail");
+  // Timeline entries that already fit lose their "Show more" button. This must
+  // run AFTER showView — while the view is still hidden every element measures
+  // zero height, which would strip the clamp off every entry.
+  initTimeline(document.getElementById("view-detail"));
+  if(!noScroll) window.scrollTo(0,0);
 }
 
 function helpDot(kind){
@@ -831,7 +839,10 @@ function statusActivity(j){
     '<div class="edit-actions">'+closeToggle(j,"card")+'</div>'+
     '<div class="edit-divider"></div>'+
     '<label class="fld">Activity log</label>'+
-    (j.notes?'<div class="md-scope md-body">'+mdToHtml(j.notes)+'</div>':'<div class="empty">No notes yet.</div>')+
+    /* DISPLAY-ONLY: renderTimeline (public/notes-timeline.js) parses the stored
+       Notes string into dated entries at render time. It never writes, never
+       reorders, and never alters a character of what Airtable holds. */
+    (j.notes?renderTimeline(j.notes):'<div class="empty">No notes yet.</div>')+
     '<label class="fld" for="edit-note" style="margin-top:16px">Add a dated note</label>'+
     '<textarea id="edit-note" rows="2" placeholder="What happened? A timestamped line (Arizona time) is appended below — nothing is overwritten."></textarea>'+
     '<div class="edit-actions">'+
