@@ -36,7 +36,7 @@ const W = {
 const O = {
   company: 'flduaK4UtRwoU9WLu',
   role: 'fldAGmW3YgUsHNbWe',
-  track: 'fldLKcLhqLycu8n2H',
+  // Track (fldLKcLhqLycu8n2H) retired 2026-09-23 (Standard v1.16 / Profile v8.27). Never written.
   stage: 'fldE1YGHZdjiPIkiR',
   comp: 'fld4neoTZvK52G9l4',
   link: 'fldpNcqFRnN7zMzzO',
@@ -259,7 +259,6 @@ async function runPoll() {
           keepers.push({ fields: {
             [O.company]: name,
             [O.role]: job.title,
-            [O.track]: 'B',
             [O.stage]: 'Saved',
             [O.source]: 'Company site',
             [O.link]: job.url || '',
