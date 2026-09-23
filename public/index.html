@@ -380,11 +380,17 @@ function syncExpandedPanel(){
   if(!EXPANDED_ID) return;
   var panel=document.getElementById("opp-panel-"+EXPANDED_ID);
   if(!panel){ EXPANDED_ID=null; return; }   // the row left the list (closed, or filtered out)
-  if(!EXPAND_ANIMATE) return;
+  if(!EXPAND_ANIMATE){ initTimeline(panel); return; }  // already open — measure now
   EXPAND_ANIMATE=false;
   requestAnimationFrame(function(){
     var p=EXPANDED_ID?document.getElementById("opp-panel-"+EXPANDED_ID):null;
     if(p) p.classList.add("is-open");
+    // The History timeline can only be measured once the panel has finished
+    // opening; until then grid-template-rows:0fr makes everything zero-height.
+    setTimeout(function(){
+      var q=EXPANDED_ID?document.getElementById("opp-panel-"+EXPANDED_ID):null;
+      if(q) initTimeline(q);
+    }, 260);
   });
 }
 
@@ -511,9 +517,13 @@ function oppLinks(j){
 
 function oppNotes(j){
   var t=(j.notes||"").trim();
+  /* DISPLAY-ONLY, same renderer as the detail view's Activity log. Tighter
+     settings here: only the 3 newest entries show and none opens expanded, so
+     a long provenance trail stays subordinate to the decision buttons below. */
   return '<section class="opp-notes">'+
     '<h5 class="opp-notes-h">History</h5>'+
-    (t?'<div class="opp-notes-body">'+esc(t)+'</div>'
+    (t?'<div class="opp-notes-body tl-compact">'+
+         renderTimeline(t,{collapseAfter:3,expandNewest:false})+'</div>'
       :'<p class="opp-empty opp-empty--sm">No history logged yet.</p>')+
   '</section>';
 }

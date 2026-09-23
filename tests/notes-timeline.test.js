@@ -46,10 +46,35 @@ function textOf(html) {
 }
 
 // Compare ignoring whitespace and the " | " delimiters (a delimiter is
-// structure, not content) and the ellipsis the renderer adds to a truncated
-// headline. Everything else must survive verbatim.
+// structure, not content). Everything else must survive verbatim.
 function signature(s) {
   return s.replace(/[|…]/g, "").replace(/\s+/g, "");
+}
+
+// The SAME date-marker shapes the parser splits on. Used to strip the marker
+// off an entry's raw text so the comparison below ignores the one thing the
+// renderer legitimately rewrites: "[2026-09-01]:" is shown as "Sep 1, 2026".
+const MARKER_HEAD =
+  /^(?:\[\d{4}-\d{2}-\d{2}[^\]]{0,24}\]\s*:?|\d{4}-\d{2}-\d{2}(?:\s+\d{1,2}:\d{2}(?:\s*[A-Z]{2,4})?)?(?:\s*\(approx\))?\s*:|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\s*:)\s*/;
+
+// Case-insensitive, because labels are re-cased for display ("SENT" -> "Sent").
+// That is the only other intentional transformation.
+function contentSig(s) { return signature(s).toLowerCase(); }
+
+// Everything the parser kept for one entry, reassembled.
+// The ":" is added back after each label because that colon is a delimiter the
+// renderer consumes when it turns "SENT:" into an eyebrow — the same way " | "
+// is consumed between entries. Adding it back keeps the comparison exact
+// everywhere else, so a genuinely dropped colon would still fail the test.
+// withColons:true  -> models the SOURCE text, for comparing against entry.raw
+// withColons:false -> models the RENDERED text, where a label is an eyebrow
+function reassemble(e, withColons) {
+  if (!e.ok) return contentSig(e.raw);
+  const c = withColons === false ? "" : ":";
+  return contentSig(
+    (e.leadLabel ? e.leadLabel + c : "") + e.headline +
+    e.sections.map(s => (s.label ? s.label + c : "") + (s.text || "")).join("")
+  );
 }
 
 /* ============================================================
@@ -59,20 +84,31 @@ console.log("\n— Content preservation (15 real samples) —");
 for (const s of SAMPLES) {
   const entries = T.parseNotes(s.notes);
 
-  // 1a. Every character survives the PARSE (in entry.raw).
+  // 1a. Every character of the source lands in some entry's raw.
   const joinedRaw = entries.map(e => e.raw).join("");
   ok(`parse keeps every character — ${s.company}`,
      signature(joinedRaw) === signature(s.notes),
      `sig lengths: raw=${signature(joinedRaw).length} src=${signature(s.notes).length}`);
 
-  // 1b. Every character survives the RENDER (reaches the DOM).
-  const rendered = textOf(T.renderTimeline(s.notes));
-  const srcSig = signature(s.notes);
-  const outSig = signature(rendered);
-  const missing = srcSig.split("").filter((c, i) => outSig.indexOf(c) === -1).length;
-  ok(`render keeps every character — ${s.company}`,
-     outSig.includes(srcSig) || outSig.length >= srcSig.length,
-     `rendered sig ${outSig.length} < source sig ${srcSig.length} (missing ~${missing})`);
+  // 1b. STRICT, per entry: what the parser kept must equal the entry's own
+  //     text with only its date marker removed. Exact string equality — this
+  //     catches a single dropped word, which a length comparison would not.
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i];
+    const expected = contentSig(e.raw.replace(MARKER_HEAD, ""));
+    const actual = reassemble(e);
+    ok(`entry ${i} loses nothing — ${s.company}`, actual === expected,
+       `expected ${expected.length} chars, got ${actual.length}\n` +
+       `       exp: ${expected.slice(0, 120)}\n       got: ${actual.slice(0, 120)}`);
+  }
+
+  // 1c. Everything the parser kept actually reaches the DOM.
+  const rendered = contentSig(textOf(T.renderTimeline(s.notes)));
+  for (let i = 0; i < entries.length; i++) {
+    ok(`entry ${i} reaches the DOM — ${s.company}`,
+       rendered.includes(reassemble(entries[i], false)),
+       `entry ${i} body not found in rendered output`);
+  }
 }
 
 /* ============================================================
@@ -301,6 +337,50 @@ console.log("— Controls —");
 }
 
 /* ============================================================
+   8b. RENDER OPTIONS — the compact board-row variant
+       (oppNotes passes {collapseAfter:3, expandNewest:false})
+   ============================================================ */
+console.log("— Render options —");
+{
+  // Two sentences each, so every entry has a body and therefore a toggle.
+  const many = Array.from({ length: 11 }, (_, i) =>
+    `[2026-09-${String(i + 1).padStart(2, "0")}]: Entry ${i + 1} headline here. ` +
+    `And a second sentence forming the body of entry ${i + 1}.`
+  ).join(" | ");
+
+  const compact = T.renderTimeline(many, { collapseAfter: 3, expandNewest: false });
+  ok("collapseAfter:3 hides the rest", compact.includes("Show 8 earlier entries"),
+     compact.slice(0, 200));
+  ok("expandNewest:false leaves every entry collapsed",
+     !compact.includes('aria-expanded="true"'), "found an expanded entry");
+  ok("no 'Show less' on first paint", !compact.includes("Show less"), "");
+
+  const full = T.renderTimeline(many);
+  ok("defaults are unchanged for the detail view",
+     full.includes("Show 6 earlier entries"), full.slice(0, 200));
+  ok("default still expands the newest", full.includes('aria-expanded="true"'), "");
+
+  // The compact variant must not drop anything either — including the 8
+  // entries behind the toggle, which are in the DOM, just hidden.
+  const compactText = contentSig(textOf(compact));
+  const parsed = T.parseNotes(many);
+  let allPresent = true, firstMissing = "";
+  for (const e of parsed) {
+    if (!compactText.includes(reassemble(e, false))) {
+      allPresent = false; firstMissing = e.headline; break;
+    }
+  }
+  ok("compact render keeps every entry, including collapsed ones",
+     allPresent, `missing: ${firstMissing}`);
+  eq("all 11 entries are in the DOM",
+     (compact.match(/class="tl-entry/g) || []).length, 11);
+}
+{
+  const html = T.renderTimeline("", { emptyHtml: '<p class="opp-empty">No history logged yet.</p>' });
+  ok("emptyHtml override is used", html.includes("No history logged yet."), html);
+}
+
+/* ============================================================
    9. HTML SAFETY
    ============================================================ */
 console.log("— Escaping —");
@@ -341,13 +421,17 @@ if (corpusPath && fs.existsSync(corpusPath)) {
         }
       }
     }
-    // content preservation across the whole base
-    const rendered = textOf(T.renderTimeline(notes));
-    if (signature(rendered).length < signature(notes).length) {
-      corpusStats.lossy.push({
-        company: (r.fields || {})[CO] || "", id: r.id,
-        src: signature(notes).length, out: signature(rendered).length
-      });
+    // content preservation across the whole base — the STRICT per-entry check
+    const rendered = contentSig(textOf(T.renderTimeline(notes)));
+    for (const e of entries) {
+      const expected = contentSig(e.raw.replace(MARKER_HEAD, ""));
+      if (reassemble(e) !== expected || !rendered.includes(reassemble(e, false))) {
+        corpusStats.lossy.push({
+          company: (r.fields || {})[CO] || "", id: r.id,
+          head: (e.headline || e.raw).slice(0, 70)
+        });
+        break;
+      }
     }
     // is stored order actually chronological?
     const iso = entries.map(e => e.dateIso).filter(Boolean);

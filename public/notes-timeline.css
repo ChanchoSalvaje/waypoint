@@ -103,6 +103,39 @@
 }
 
 /* ============================================================
+   COMPACT VARIANT — the "History" block inside an expanded
+   Opportunities board row (.opp-notes-body). Same timeline,
+   smaller and quieter, so it stays subordinate to the decision
+   buttons directly beneath it.
+
+   The old block capped itself at 132px and scrolled. The timeline
+   bounds its own height instead (3 newest entries, all collapsed,
+   the rest behind "Show N earlier entries"), so the cap is raised
+   to a generous backstop rather than a working scroll window.
+   ============================================================ */
+.opp-notes-body.tl-compact{
+  white-space:normal;        /* the container's pre-wrap is for raw text only */
+  max-height:none;           /* the timeline self-bounds; see above */
+  overflow:visible;
+  font-size:inherit;color:inherit;
+}
+.tl-compact .tl-wrap{margin-top:0}
+.tl-compact .tl-entry{padding:10px 0 10px 12px}
+.tl-compact .tl-entry:first-child{padding-top:2px}
+.tl-compact .tl-meta{margin-bottom:4px;gap:6px}
+.tl-compact .tl-date{font-size:10px;padding:3px 7px}
+.tl-compact .tl-lead-lbl,.tl-compact .tl-lbl{font-size:9.5px;letter-spacing:.1em}
+.tl-compact .tl-headline{font-size:13px;line-height:1.45;max-width:72ch}
+.tl-compact .tl-body{margin-top:5px}
+.tl-compact .tl-body.is-clamped{max-height:2.3em}   /* 2 lines here, 3 on the detail view */
+.tl-compact .tl-p,.tl-compact .tl-raw{
+  font-size:12.5px;line-height:1.5;color:var(--muted);max-width:72ch;
+}
+.tl-compact .tl-sec{margin-bottom:8px}
+.tl-compact .tl-more,.tl-compact .tl-earlier{font-size:12px;margin-top:5px}
+.tl-compact .tl-mono{font-size:.9em;padding:0 3px}
+
+/* ============================================================
    LONG-TEXT READABILITY — the other long fields on the detail
    view: Company Background & History, Edge Facts, Questions to
    Ask, Likely Questions & Prep, and the Next Action callout.

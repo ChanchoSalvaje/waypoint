@@ -366,13 +366,25 @@
 
   var COLLAPSE_AFTER = 5;   // more than this many entries -> hide the oldest
 
-  /* renderTimeline(notesString) -> HTML for the whole Activity Log.
-     Oldest first, newest last, note box sits below it in the card. */
-  function renderTimeline(notes) {
-    var entries = parseNotes(notes);
-    if (!entries.length) return '<div class="empty">No notes yet.</div>';
+  /* renderTimeline(notesString, opts) -> HTML for a whole Activity Log.
+     Oldest first, newest last.
 
-    var hiddenCount = Math.max(0, entries.length - COLLAPSE_AFTER);
+     opts.collapseAfter  how many recent entries stay visible (default 5)
+     opts.expandNewest   open the newest entry on load (default true)
+     opts.emptyHtml      markup to use when there are no entries
+
+     The defaults are the job detail view. The expanded board row passes
+     tighter values so the History block stays subordinate to the decision
+     buttons underneath it. */
+  function renderTimeline(notes, opts) {
+    opts = opts || {};
+    var collapseAfter = (typeof opts.collapseAfter === "number") ? opts.collapseAfter : COLLAPSE_AFTER;
+    var expandNewest = (opts.expandNewest !== false);
+
+    var entries = parseNotes(notes);
+    if (!entries.length) return opts.emptyHtml || '<div class="empty">No notes yet.</div>';
+
+    var hiddenCount = Math.max(0, entries.length - collapseAfter);
     var html = "";
 
     if (hiddenCount > 0) {
@@ -394,7 +406,7 @@
     html += '<ol class="tl-list">' +
       recent.map(function (e, i) {
         // The newest entry (the last one) opens expanded; older ones collapsed.
-        return renderEntry(e, { expanded: i === recent.length - 1 });
+        return renderEntry(e, { expanded: expandNewest && i === recent.length - 1 });
       }).join("") +
       "</ol>";
 
@@ -408,6 +420,10 @@
     var bodies = root.querySelectorAll(".tl-body.is-clamped");
     for (var i = 0; i < bodies.length; i++) {
       var b = bodies[i];
+      // Skip anything not laid out yet. A hidden view, or a board panel still
+      // animating open from grid-template-rows:0fr, measures zero for every
+      // element - which would look like "it fits" and strip every clamp.
+      if (b.clientHeight === 0) continue;
       if (b.scrollHeight <= b.clientHeight + 2) {
         b.classList.remove("is-clamped");
         var btn = root.querySelector('.tl-more[aria-controls="' + b.id + '"]');
