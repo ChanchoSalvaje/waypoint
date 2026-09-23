@@ -74,7 +74,7 @@
         none previously in any document:"
      from being mistaken for a label - the caps run stops at the comma, so
      it stays an ordinary body sentence. Mid-sentence caps used for emphasis
-     ("...(1) PRODUCT OWNER of an AI reuse...") have no colon and are
+     ("...(1) PRODUCT OWNER of a platform...") have no colon and are
      likewise left alone.
      -------------------------------------------------------------------- */
   var LABEL = new RegExp(

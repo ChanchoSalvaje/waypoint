@@ -3,9 +3,16 @@
    Run:  node tests/notes-timeline.test.js
    No dependencies, no network, no Airtable calls.
 
-   The fixtures in tests/fixtures/notes-samples.json are 15 REAL
-   Notes values copied read-only out of the Opportunities table,
-   chosen to cover every stored format found in the base.
+   The fixtures in tests/fixtures/notes-samples.json are 15 Notes
+   values chosen to cover every stored format found in the base,
+   then ANONYMIZED (2026-09-22): every word outside a small list of
+   generic ones is swapped for a same-length placeholder with the
+   same letter-by-letter casing, other digits are randomized, and
+   record ids are replaced. Date markers, " | " joins, newlines,
+   punctuation, labels and caps runs are untouched, and the parser
+   was checked to produce the identical structure (entries, dates,
+   times, labels, mono and caps spans) on the anonymized text.
+   Do not paste real Notes values back into this file.
 
    The headline test is CONTENT PRESERVATION: for every sample, the
    rendered HTML must still contain every non-whitespace character
@@ -80,7 +87,7 @@ function reassemble(e, withColons) {
 /* ============================================================
    1. CONTENT PRESERVATION — the guarantee that matters most
    ============================================================ */
-console.log("\n— Content preservation (15 real samples) —");
+console.log("\n— Content preservation (15 anonymized samples) —");
 for (const s of SAMPLES) {
   const entries = T.parseNotes(s.notes);
 
@@ -116,7 +123,7 @@ for (const s of SAMPLES) {
    ============================================================ */
 console.log("— Body text is never re-cased —");
 {
-  const src = "[2026-08-30] APPLIED via Workday (R12358).\n" +
+  const src = "[2026-08-30] APPLIED via Workday (R40417).\n" +
               "SENT: NEW MATERIAL CAPTURED HERE FOR THE FIRST TIME, all of it Tim's.";
   const html = T.renderTimeline(src);
   const txt = textOf(html);
@@ -158,7 +165,7 @@ eq("label with a date keeps the date",
      "got labels: " + JSON.stringify(labels));
 
   // Mid-sentence caps used for emphasis (no colon) are never labels.
-  const e2 = T.parseNotes("[2026-08-30] Internal name is ARC — NOT used on outgoing docs.")[0];
+  const e2 = T.parseNotes("[2026-08-30] Internal name is ZED — NOT used on outgoing docs.")[0];
   ok("mid-sentence emphasis caps are not labels",
      e2.sections.every(s => !s.label), JSON.stringify(e2.sections));
 }
@@ -192,7 +199,7 @@ console.log("— Headlines —");
 {
   // A long first sentence is shown in full and must NOT also appear in the body.
   const long = "[2026-09-15]: APPLY LINK WRITTEN from Tim-supplied browser URL " +
-    "(https://jobs.thecignagroup.com/us/en/job/26010981/AI-Business-Partner-Senior-Principal); " +
+    "(https://jobs.example.com/us/en/job/10000001/Sample-Role-Title-Senior); " +
     "live per Tim's in-browser read 2026-09-15. Human-verify-only ATS.";
   const e = T.parseNotes(long)[0];
   ok("long headline is not truncated", !e.headline.endsWith("…"), e.headline);
@@ -270,13 +277,13 @@ eq("Dec 31", T._displayIso("2025-12-31"), "Dec 31, 2025");
    ============================================================ */
 console.log("— Fallback & ordering —");
 {
-  const e = T.parseNotes("LinkedIn job-alert digest (director in Tucson) 2026-09-18; jobid 4440896534");
+  const e = T.parseNotes("LinkedIn job-alert digest (director in Sample City) 2026-09-18; jobid 4000000001");
   eq("undated single line is one entry", e.length, 1);
   eq("  no date chip", e[0].date, null);
   const txt = textOf(T.renderTimeline(
-    "LinkedIn job-alert digest (director in Tucson) 2026-09-18; jobid 4440896534"));
+    "LinkedIn job-alert digest (director in Sample City) 2026-09-18; jobid 4000000001"));
   ok("  content still rendered in full",
-     txt.includes("jobid 4440896534"), txt);
+     txt.includes("jobid 4000000001"), txt);
 }
 {
   // Stored order is already oldest-first (every writer appends), and the
@@ -297,14 +304,14 @@ console.log("— Fallback & ordering —");
    ============================================================ */
 console.log("— Monospace —");
 {
-  const html = T.renderTimeline("[2026-08-30] Sent TMasters_Resume_Workiva_CPX.docx for R12358.");
+  const html = T.renderTimeline("[2026-08-30] Sent TMasters_Resume_SampleCo_OPS.docx for R40417.");
   ok("filename is monospaced",
-     /<span class="tl-mono">TMasters_Resume_Workiva_CPX\.docx<\/span>/.test(html), html);
+     /<span class="tl-mono">TMasters_Resume_SampleCo_OPS\.docx<\/span>/.test(html), html);
   ok("requisition id is monospaced",
-     /<span class="tl-mono">R12358<\/span>/.test(html), html);
-  const html2 = T.renderTimeline("[2026-09-13] Predicted by row rec5e3b7tw6Uegm8J earlier.");
+     /<span class="tl-mono">R40417<\/span>/.test(html), html);
+  const html2 = T.renderTimeline("[2026-09-13] Predicted by row recA1b2C3d4E5f6G7 earlier.");
   ok("record id is monospaced",
-     /<span class="tl-mono">rec5e3b7tw6Uegm8J<\/span>/.test(html2), html2);
+     /<span class="tl-mono">recA1b2C3d4E5f6G7<\/span>/.test(html2), html2);
 }
 
 /* ============================================================
