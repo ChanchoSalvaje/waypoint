@@ -11,11 +11,12 @@
   publish = "public"
   framework = "#static"
 
-# Scheduled function: poll the ATS Watchlist daily at 12:00 PM Tucson
-# (19:00 UTC — Arizona has no DST). Cron lives here; logic is in
-# poll-ats-background.js (a background function — 15-min budget for the full poll).
-[functions."poll-ats-background"]
-  schedule = "0 19 * * *"
+# ATS Watchlist polling was retired 2026-08-29 (discovery is title/fit-driven;
+# all Watchlist rows are Paused). The daily schedule that used to live here was
+# removed 2026-09-22. poll-ats-background.js stays in the repo and can still be
+# started by hand through poll-ats-now.js. To bring the daily run back, re-add:
+#   [functions."poll-ats-background"]
+#     schedule = "0 19 * * *"
 
 # Password gate: this edge function runs on EVERY request (path "/*") — including
 # the /.netlify/functions/jobs data endpoint — and returns 401 unless the correct
