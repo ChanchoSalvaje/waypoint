@@ -11,6 +11,7 @@
 <!-- Activity Log timeline: display-only parser + renderer for the Notes field. -->
 <link rel="stylesheet" href="/notes-timeline.css">
 <script src="/notes-timeline.js"></script>
+<script src="/fit-read.js"></script>
 </head>
 <body>
 
@@ -1006,7 +1007,7 @@ function todayCard(j){
       (j.fit?'<span class="tj-fit" title="Fit — tool-assessed"><span class="dot"></span>'+j.fit+'/5</span>':'')+
     '</div>'+
     (chips?'<div class="tj-chips">'+chips+'</div>':'')+
-    (j.fitRead?'<div class="tj-read">'+mdToHtml(j.fitRead)+'</div>':'')+
+    (j.fitRead?'<div class="tj-read">'+(renderFitRead(j.fitRead)||mdToHtml(j.fitRead))+'</div>':'')+
     '<div class="tj-foot">'+
       posting+
       '<div class="tj-actions">'+

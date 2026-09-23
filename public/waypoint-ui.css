@@ -523,6 +523,29 @@ footer{margin-top:28px;text-align:center;color:var(--faint);font-size:12px}
 }
 .tj-read .md-p,.tj-read .md-ul li{font-size:13.5px;line-height:1.55;color:var(--muted)}
 .tj-read .md-h{font-size:12px;margin-top:10px}
+/* multi-paragraph reads keep the markdown path; the opening paragraph is the verdict */
+.tj-read > .md-p:first-child{color:var(--ink)}
+
+/* Single-paragraph reads (public/fit-read.js): verdict first, then one line
+   per caveat. Marker SHAPE carries the meaning, colour only reinforces it:
+   ring = something to confirm, filled dot = a note, red dot = a flag. */
+.fr-lead{margin:0;font-size:14px;line-height:1.5;color:var(--ink)}
+.fr-list{list-style:none;margin:8px 0 0;padding:0}
+.fr-item{
+  position:relative;padding-left:17px;margin-top:5px;
+  font-size:13px;line-height:1.5;color:var(--muted);
+}
+.fr-item::first-letter{text-transform:uppercase}  /* display only; stored text untouched */
+.fr-item::before{
+  content:"";position:absolute;left:3px;top:.6em;
+  width:5px;height:5px;border-radius:50%;background:var(--faint);
+}
+.fr-item--check::before{
+  left:2px;top:.52em;width:5px;height:5px;
+  background:transparent;border:1.5px solid var(--steel-2);
+}
+.fr-item--flag::before{background:var(--flag)}
+.fr-flag{font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--flag)}
 
 .tj-foot{
   display:flex;align-items:center;justify-content:space-between;gap:14px;
