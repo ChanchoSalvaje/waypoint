@@ -12,7 +12,7 @@ A master–detail web app over an existing Airtable base: a dashboard (Today's n
 - Reuse the existing design from the TEP prep page (`index.html`): the "voltage/steel" palette, the mono instrument-label style, the card layout. Do NOT replace it with a generic template.
 
 ## Golden rules (do not violate)
-1. **Secret handling:** the Airtable Personal Access Token lives ONLY in a local `.env` file that is **gitignored**. Never hardcode it, never put it in client-side JS, never commit it, never print it to logs. It is used ONLY inside serverless functions.
+1. **Secret handling:** the Airtable Personal Access Token has ONE home: the Netlify site's environment variables, with the Local development context included so `netlify dev` injects it. Don't keep a second copy in `.env` (it drifts on rotation); `.env` stays gitignored in any case. Never hardcode the token, never put it in client-side JS, never commit it, never print it to logs. It is used ONLY inside serverless functions.
 2. **Read-first:** build and verify the read/display path before writing anything back to Airtable.
 3. **Real data only:** the shipped UI shows real Airtable records — do not leave fabricated placeholder jobs in the final interface.
 4. **Notes are append-only:** when writing updates to the Notes field, append a dated entry; never overwrite existing content.

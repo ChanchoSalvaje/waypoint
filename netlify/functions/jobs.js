@@ -79,11 +79,13 @@ function mapRecord(record) {
 exports.handler = async function () {
   const token = process.env.AIRTABLE_TOKEN;
 
-  // Fail loudly (but safely) if the token hasn't been set in .env yet.
+  // Fail loudly (but safely) if the token isn't set. Its one home is the
+  // Netlify site's environment variables; `netlify dev` injects it locally
+  // when the variable includes the "Local development" context.
   if (!token) {
     return json(500, {
       error:
-        "AIRTABLE_TOKEN is not set. Paste your token into the .env file, then restart `netlify dev`.",
+        "AIRTABLE_TOKEN is not set. Add it in Netlify > Site configuration > Environment variables (include the Local development context), then restart `netlify dev`.",
     });
   }
 
