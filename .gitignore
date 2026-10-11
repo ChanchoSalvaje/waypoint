@@ -11,3 +11,6 @@ node_modules/
 
 # Files the Claude desktop app saves into this folder (screenshots, previews)
 Claude outputs/
+
+# Local Claude Code settings (per-machine)
+.claude/settings.local.json
