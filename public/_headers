@@ -1,0 +1,6 @@
+/spore/*
+  X-Robots-Tag: noindex, nofollow
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
+  Cache-Control: no-store
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src data:; connect-src https://ujsliyqjzyofcytcemhs.supabase.co; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
