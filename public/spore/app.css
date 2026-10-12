@@ -764,3 +764,5 @@ footer{margin-top:28px;text-align:center;color:var(--faint);font-size:12px}
 @media(max-width:380px){.with-art .page-heading{grid-template-columns:1fr}.daily-art{max-width:160px}.tarot-art{width:75px}.daily-spark>summary small{max-width:120px}}
 
 [hidden]{display:none!important} #auth-gate input{display:block;width:100%;padding:.7rem;margin:1rem 0} .auth-actions{display:flex;flex-wrap:wrap;gap:1rem;margin-top:1rem} .utility{flex-wrap:wrap} .briefing p{white-space:pre-wrap}
+
+#set-password-form{display:grid;gap:.7rem;max-width:32rem} #set-password-form input{padding:.7rem;font:inherit;border:1px solid #aaa;border-radius:6px}

@@ -20800,6 +20800,47 @@ ${suffix}`;
   }
   if (shouldShowDeprecationWarning()) console.warn("\u26A0\uFE0F  Node.js 20 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 22 or later. For more information, visit: https://github.com/orgs/supabase/discussions/45715");
 
+  // password.mjs
+  function validatePassword(password, confirmation) {
+    if (typeof password !== "string" || password.length < 12) throw new Error("Use a password with at least 12 characters.");
+    if (password.length > 128) throw new Error("Use no more than 128 characters.");
+    if (password !== confirmation) throw new Error("The passwords do not match.");
+  }
+  function passwordError(error) {
+    const code = error?.code;
+    if (["reauthentication_needed", "reauthentication_not_valid", "session_not_found", "session_expired", "refresh_token_not_found", "refresh_token_already_used"].includes(code)) return new Error("Password was not changed. Reauthentication is required (" + code + "). Stop here and contact the workspace owner. No email was requested.");
+    if (code === "weak_password") return new Error("Password was not changed. Supabase rejected this password as too weak (weak_password). Choose a stronger unique password.");
+    if (code === "same_password") return new Error("Password was not changed because it matches the existing password (same_password).");
+    return new Error("Password change was not confirmed (PASSWORD_UPDATE_FAILED). Stop here and contact the workspace owner. No email was requested.");
+  }
+  function createPasswordActions(client, authorize) {
+    return {
+      async signInPassword(email, password) {
+        if (email !== "tim.masters@gmail.com" || !password) throw new Error("Enter your invited email and password.");
+        let result;
+        try {
+          result = await client.auth.signInWithPassword({ email, password });
+        } catch {
+          throw new Error("Sign-in could not be completed. Check your connection and try again.");
+        }
+        if (result.error) throw new Error(result.error.status === 429 ? "Too many sign-in attempts. Wait before trying again." : "Sign-in failed. Check your email and password. No email was sent.");
+        await authorize();
+      },
+      async setPassword(password, confirmation) {
+        validatePassword(password, confirmation);
+        await authorize();
+        let result;
+        try {
+          result = await client.auth.updateUser({ password });
+        } catch {
+          throw passwordError(null);
+        }
+        if (result.error) throw passwordError(result.error);
+        return "Password saved. You can now sign in to live Waypoint with your email and this password.";
+      }
+    };
+  }
+
   // auth-flow.mjs
   var contexts = /* @__PURE__ */ new WeakMap();
   function registerAuthFlow(auth, storage, locks = globalThis.navigator?.locks) {
@@ -20936,6 +20977,7 @@ ${suffix}`;
       return clone(owned(r.data, id));
     }
     return {
+      ...createPasswordActions(client, identity),
       async requestSignIn(email) {
         if (!redirectTo) fail("CONFIG", "Configure the approved sign-in callback first.");
         const { error } = await requestEmail(client.auth, { email, options: { shouldCreateUser: false, emailRedirectTo: redirectTo } });
@@ -21209,7 +21251,7 @@ const client=SporeSDK.publicClient(SporeSDK.createClient,{url:'https://ujsliyqjz
 const adapter=SporeSDK.createAdapter(client,{redirectTo:SporeSDK.CALLBACK,onInvalidate:lockWorkspace});
 function showSignIn(show){$('login-form').hidden=!show;$('sign-in-help').hidden=!show;}
 function authMessage(text){$('auth-message').textContent=text;}
-function lockWorkspace(){showSignIn(false);workspaceEpoch++;loadCounter++;state=null;latestBrief=null;taskVersions.clear();noteDrafts={};editing=null;undoAction=null;document.querySelector('.studio').hidden=true;$('auth-gate').hidden=false;$('view').replaceChildren();$('notes').replaceChildren();$('history-list').replaceChildren();$('task-detail').replaceChildren();$('task-form').reset();$('note').value='';if($('task-dialog').open)$('task-dialog').close();authMessage('Workspace locked. Sign in or check access again.');}
+function lockWorkspace(){if($('set-password-form'))$('set-password-form').reset();if($('login-password'))$('login-password').value='';showSignIn(false);workspaceEpoch++;loadCounter++;state=null;latestBrief=null;taskVersions.clear();noteDrafts={};editing=null;undoAction=null;document.querySelector('.studio').hidden=true;$('auth-gate').hidden=false;$('view').replaceChildren();$('notes').replaceChildren();$('history-list').replaceChildren();$('task-detail').replaceChildren();$('task-form').reset();$('note').value='';if($('task-dialog').open)$('task-dialog').close();authMessage('Workspace locked. Sign in or check access again.');}
 function convertSnapshot(s){
  taskVersions=new Map(s.tasks.map(t=>[t.id,t.revision]));latestBrief=s.briefs.sort((a,b)=>b.brief_date.localeCompare(a.brief_date))[0]||null;
  fixtures.commitments=(latestBrief?.commitments||[]).filter(c=>c&&typeof c.title==='string'&&typeof c.date==='string').map(c=>[c.date,c.title,names[c.section]||'Personal',Object.hasOwn(names,c.section)?c.section:'personal']);
@@ -21226,7 +21268,10 @@ async function saveConnected(action){
  state.revision++;state.history.push({at:new Date().toISOString(),section:saved.section,text:action.kind==='note'?'Note saved':'Task saved'});
  }catch(e){if(['AUTH','FORBIDDEN','SESSION_CHANGED'].includes(e.code))lockWorkspace();throw e;}
 }
-$('login-form').addEventListener('submit',async e=>{e.preventDefault();const email=$('login-email').value.trim().toLowerCase();if(email!=='tim.masters@gmail.com'){authMessage('Use your invited account. Public registration is disabled.');return;}const b=e.submitter;b.disabled=true;try{authMessage(await adapter.requestSignIn(email));}catch{authMessage('The sign-in email could not be sent. Check the address or try later.');}finally{b.disabled=false;}});
+$('login-form').addEventListener('submit',async e=>{e.preventDefault();const email=$('login-email').value.trim().toLowerCase(),input=$('login-password'),b=e.submitter;let password=input.value;input.value='';b.disabled=true;try{await adapter.signInPassword(email,password);password='';await loadConnected();}catch(error){authMessage(error.message);}finally{password='';b.disabled=false;}});
+const passwordForm=$('set-password-form');
+if(passwordForm)passwordForm.addEventListener('submit',async e=>{e.preventDefault();const b=e.submitter;let password=$('new-password').value,confirmation=$('confirm-password').value;passwordForm.reset();b.disabled=true;try{$('password-message').textContent=await adapter.setPassword(password,confirmation);}catch(error){$('password-message').textContent=error.message;}finally{password='';confirmation='';b.disabled=false;}});
+
 $('retry-auth').addEventListener('click',()=>loadConnected());
 $('refresh').addEventListener('click',async()=>{if(busy){notify('Wait for the current save.');return;}await loadConnected();});
 async function signOutConnected(){lockWorkspace();try{await adapter.signOut();showSignIn(true);authMessage('Signed out.');}catch{showSignIn(true);authMessage('Locked here; server sign-out was not confirmed. Try again.');}}
