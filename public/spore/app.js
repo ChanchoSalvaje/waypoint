@@ -20800,6 +20800,40 @@ ${suffix}`;
   }
   if (shouldShowDeprecationWarning()) console.warn("\u26A0\uFE0F  Node.js 20 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 22 or later. For more information, visit: https://github.com/orgs/supabase/discussions/45715");
 
+  // auth-flow.mjs
+  var contexts = /* @__PURE__ */ new WeakMap();
+  function registerAuthFlow(auth, storage, locks = globalThis.navigator?.locks) {
+    contexts.set(auth, { storage, locks, queue: Promise.resolve() });
+  }
+  function withAuthFlow(auth, action) {
+    const c = contexts.get(auth);
+    if (!c) return action();
+    if (c.locks) return c.locks.request("spore-auth-flow-v1", action);
+    const next = c.queue.then(action, action);
+    c.queue = next.catch(() => {
+    });
+    return next;
+  }
+  function requestEmail(auth, credentials) {
+    return withAuthFlow(auth, async () => {
+      const c = contexts.get(auth), key = "spore-auth-v1-code-verifier";
+      const prior = c?.storage?.getItem(key) ?? null;
+      function restore() {
+        if (!c?.storage) return;
+        if (prior === null) c.storage.removeItem(key);
+        else c.storage.setItem(key, prior);
+      }
+      try {
+        const result = await auth.signInWithOtp(credentials);
+        if (result.error) restore();
+        return result;
+      } catch (error) {
+        restore();
+        throw error;
+      }
+    });
+  }
+
   // adapter.mjs
   var SporeError = class extends Error {
     constructor(code, message) {
@@ -20818,7 +20852,9 @@ ${suffix}`;
     const redirect = new URL(redirectTo);
     if (redirect.protocol !== "https:" && !(redirect.protocol === "http:" && ["localhost", "127.0.0.1"].includes(redirect.hostname))) fail("CONFIG", "A secure, explicitly approved callback URL is required.");
     if (redirect.username || redirect.password || redirect.search || redirect.hash) fail("CONFIG", "Use a clean callback URL.");
-    return createClient2(url, publishableKey, { auth: { flowType: "pkce", detectSessionInUrl: false, persistSession: true, autoRefreshToken: true, storageKey: "spore-auth-v1" } });
+    const client = createClient2(url, publishableKey, { auth: { flowType: "pkce", detectSessionInUrl: false, persistSession: true, autoRefreshToken: true, storageKey: "spore-auth-v1" } });
+    registerAuthFlow(client.auth, globalThis.localStorage);
+    return client;
   }
   function createAdapter(client, { redirectTo, onInvalidate = () => {
   } } = {}) {
@@ -20902,8 +20938,8 @@ ${suffix}`;
     return {
       async requestSignIn(email) {
         if (!redirectTo) fail("CONFIG", "Configure the approved sign-in callback first.");
-        const { error } = await client.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: redirectTo } });
-        if (error) fail("AUTH", "The sign-in email could not be sent. Try later or contact the workspace owner.");
+        const { error } = await requestEmail(client.auth, { email, options: { shouldCreateUser: false, emailRedirectTo: redirectTo } });
+        if (error) fail("AUTH", error.status === 429 ? "Email sending is temporarily limited. Do not keep requesting emails. Any earlier pending link has been preserved." : "The sign-in email could not be sent. Any earlier pending link has been preserved.");
         return "Check your email. Open the link in this same browser.";
       },
       async signOut() {
@@ -20941,6 +20977,10 @@ ${suffix}`;
     if (h.has("access_token") || h.has("refresh_token")) return h.get("type") === "invite" && h.get("access_token") && h.get("refresh_token") ? { kind: "invite", access_token: h.get("access_token"), refresh_token: h.get("refresh_token") } : { kind: "error" };
     return { kind: "none" };
   }
+  function returnError(error) {
+    if (error?.code === "pkce_code_verifier_not_found") return new Error("Sign-in could not be completed: this browser no longer has the pending sign-in verification (PKCE_MISSING). Stop retrying this link; request one fresh link after the email limit clears.");
+    return new Error("Sign-in could not be completed (AUTH_RETURN_FAILED). Keep this page open and contact the workspace owner before requesting another email.");
+  }
   async function finishReturn(auth, href, clean) {
     const r = classifyReturn(href);
     if (r.kind === "none") return false;
@@ -20948,11 +20988,11 @@ ${suffix}`;
     if (r.kind === "error") throw new Error("This sign-in link is invalid or expired. Request a new sign-in link.");
     let result;
     try {
-      result = r.kind === "invite" ? await auth.setSession({ access_token: r.access_token, refresh_token: r.refresh_token }) : await auth.exchangeCodeForSession(r.code, r.flowId ? { flowId: r.flowId } : void 0);
-    } catch {
-      throw new Error("Sign-in could not be completed. Request a new link in this browser.");
+      result = await withAuthFlow(auth, () => r.kind === "invite" ? auth.setSession({ access_token: r.access_token, refresh_token: r.refresh_token }) : auth.exchangeCodeForSession(r.code, r.flowId ? { flowId: r.flowId } : void 0));
+    } catch (error) {
+      throw returnError(error);
     }
-    if (result.error) throw new Error("Sign-in could not be completed. Request a new link in this browser.");
+    if (result.error) throw returnError(result.error);
     return true;
   }
   return __toCommonJS(sdk_entry_exports);
