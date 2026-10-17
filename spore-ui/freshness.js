@@ -1,6 +1,6 @@
 (function(root){
  'use strict';
- const scopes=['daily_brief','career','writing'];
+ const scopes=['daily_brief','career','writing','two_week_sweep'];
  function receipt(n){try{
   const r=JSON.parse(n.body),keys=['type','v','run_id','scope','scheduled_for','checked_at','outcome','content_id','message'];
   const iso=x=>typeof x==='string'&&/^\d{4}-\d{2}-\d{2}T/.test(x)&&Number.isFinite(Date.parse(x));
