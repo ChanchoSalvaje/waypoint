@@ -1,21 +1,22 @@
-let syncAt=null,syncState='loading',runReceipts=[];
+let syncAt=null,syncState='loading',runReceipts=[],runClaims=[];
 let busy=false,latestBrief=null,taskVersions=new Map(),workspaceEpoch=0,loadCounter=0;
 const client=SporeSDK.publicClient(SporeSDK.createClient,{url:'https://ujsliyqjzyofcytcemhs.supabase.co',publishableKey:'sb_publishable_aeVSmS8RJ5SotDmQdtaZig_HjzagE8X',redirectTo:SporeSDK.CALLBACK});
 const adapter=SporeSDK.createAdapter(client,{redirectTo:SporeSDK.CALLBACK,onInvalidate:lockWorkspace});
 function showSignIn(show){$('login-form').hidden=!show;$('sign-in-help').hidden=!show;}
 function authMessage(text){$('auth-message').textContent=text;}
-function lockWorkspace(){if($('detail-reader')?.open)$('detail-reader').close();if(typeof readerBody!=='undefined')readerBody.replaceChildren();runReceipts=[];syncAt=null;$('freshness').replaceChildren();if($('set-password-form'))$('set-password-form').reset();if($('login-password'))$('login-password').value='';showSignIn(false);workspaceEpoch++;loadCounter++;state=null;latestBrief=null;taskVersions.clear();noteDrafts={};editing=null;undoAction=null;document.querySelector('.studio').hidden=true;$('auth-gate').hidden=false;$('view').replaceChildren();$('notes').replaceChildren();$('history-list').replaceChildren();$('task-detail').replaceChildren();$('task-form').reset();$('note').value='';if($('task-dialog').open)$('task-dialog').close();authMessage('Workspace locked. Sign in or check access again.');}
+function lockWorkspace(){if($('detail-reader')?.open)$('detail-reader').close();if(typeof readerBody!=='undefined')readerBody.replaceChildren();runReceipts=[];runClaims=[];syncAt=null;$('freshness').replaceChildren();if($('set-password-form'))$('set-password-form').reset();if($('login-password'))$('login-password').value='';showSignIn(false);workspaceEpoch++;loadCounter++;state=null;latestBrief=null;taskVersions.clear();noteDrafts={};editing=null;undoAction=null;document.querySelector('.studio').hidden=true;$('auth-gate').hidden=false;$('view').replaceChildren();$('notes').replaceChildren();$('history-list').replaceChildren();$('task-detail').replaceChildren();$('task-form').reset();$('note').value='';if($('task-dialog').open)$('task-dialog').close();authMessage('Workspace locked. Sign in or check access again.');}
 function convertSnapshot(s){
  s=SporeVisibility.snapshot(s);
- runReceipts=s.notes.map(SporeFreshness.receipt).filter(Boolean);s={...s,notes:s.notes.filter(n=>!SporeFreshness.receipt(n))};
+ runReceipts=s.runProofs?.receipts||s.notes.map(SporeFreshness.receipt).filter(Boolean);runClaims=s.runProofs?.claims||[];s={...s,notes:s.notes.filter(n=>!SporeFreshness.receipt(n)&&!SporeFreshness.claim(n))};
  taskVersions=new Map(s.tasks.map(t=>[t.id,t.revision]));latestBrief=s.briefs.sort((a,b)=>b.brief_date.localeCompare(a.brief_date))[0]||null;
  fixtures.commitments=(latestBrief?.commitments||[]).filter(c=>c&&typeof c.title==='string'&&typeof c.date==='string').map(c=>[c.date,c.title,names[c.section]||'Personal',Object.hasOwn(names,c.section)?c.section:'personal']);
  return {owner:s.owner,version:2,revision:0,mode:'connected',planningDate:DailySpark.dayKey(),generatedAt:new Date().toISOString(),tasks:s.tasks.map(t=>({...t,nextAction:t.next_action,deferUntil:t.defer_until||'',due:t.due||'',opportunityRef:t.airtable_record_id})),notes:s.notes.map(n=>({...n,at:n.created_at})),history:s.history.map(h=>({...h,at:h.created_at,text:h.kind.replaceAll('_',' ')}))};
 }
+async function checkedSnapshot(s){return {...s,runProofs:await SporeFreshness.verifyRuns(s.notes,s.owner,s.briefs.concat(s.notes.filter(n=>!SporeFreshness.receipt(n)&&!SporeFreshness.claim(n))))};}
 async function loadConnected(){
  if(busy)return false;
  const ticket=++loadCounter,epoch=workspaceEpoch;syncState='loading';if(state)renderFreshness();
- try{const s=await adapter.load();if(ticket!==loadCounter||epoch!==workspaceEpoch)return false;
+ try{const s=await checkedSnapshot(await adapter.load());if(ticket!==loadCounter||epoch!==workspaceEpoch)return false;
  if(busy){syncState='pending';renderFreshness();return false;}
  noteDrafts[active]=$('note').value;
  state=convertSnapshot(s);syncAt=new Date().toISOString();syncState='ok';

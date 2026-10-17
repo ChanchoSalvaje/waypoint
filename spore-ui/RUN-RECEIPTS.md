@@ -1,35 +1,67 @@
-# Daily freshness receipts, version 1
+# Run claim and completion contract, version 1
 
-No schema or permission change is required. Append one owner-private `spore_notes` record in `section: "today"`, `brief_id: null`. Its body must be exactly a JSON object with these keys (all required; no extra keys):
+Use existing owner-private `spore_notes`, append-only, `section: "today"`, `brief_id: null`. No schema, permissions, or services change. Never fabricate historical completion. Valid machine records are excluded from normal content cards and shown in freshness details. Unrecognized bodies remain ordinary notes.
+
+## Terminal receipt
+
+All nine original keys remain required. Legacy receipts containing exactly these keys remain parseable, but are **unverified** and establish neither claim-safe completion nor retry authority:
 
 ```json
-{"type":"spore_run_receipt","v":1,"run_id":"stable unique run identifier","scope":"daily_brief","scheduled_for":"2026-10-18T15:00:00Z","checked_at":"2026-10-18T16:10:00Z","outcome":"no_change","content_id":null,"message":"Checked the required sources; no material changes."}
+{"type":"spore_run_receipt","v":1,"run_id":"stable run identifier","scope":"daily_brief","scheduled_for":"2026-10-18T15:00:00Z","checked_at":"2026-10-18T16:10:00Z","outcome":"no_change","content_id":null,"message":"Checked required sources; no material changes."}
 ```
 
-This example is documentation, not an actual completion record. Never backfill a fabricated success.
+New claimed executions must include **all five** extensions together. No other keys are allowed:
 
-- `scope`: `daily_brief`, `career`, `writing`, or `two_week_sweep` (Personal/SAFOJ/Writing coverage). Only `daily_brief` covers the daily brief; `two_week_sweep` is independently displayed in freshness details.
-- `outcome`: `published`, `no_change`, or `failed`. A no-change success requires actually completing the relevant source check.
-- `content_id`: saved brief/note UUID or null. `published` should reference a successful saved-content readback; never claim publication before readback.
-- `scheduled_for`: original intended run time; `checked_at`: actual outcome time. Use ISO timestamps with timezone.
-- `message`: safe user-readable text, at most 500 characters; no credentials/raw errors/private connector payloads.
-- Use a stable receipt row UUID per run/attempt and read before retrying an ambiguous insert. Existing notes are append-only. Do not overwrite user notes.
-- Before a recovery run, inspect the primary run status and existing receipts. At 08:30 Arizona, an 08:00 flexible sweep may legitimately still be within its 08:00–09:00 window: defer while active, avoid simultaneous runs, and inspect again after the window. The UI's warning deadline is 09:30 Arizona.
-- A last successful *browser sync* is independent of a source check. The UI never synthesizes run receipts from database reads.
-- Valid receipts are excluded from ordinary notes and shown under Freshness details. Invalid or unknown-version records remain visible as ordinary notes rather than silently disappearing.
+```json
+{"claim_id":"UUID","attempt":0,"owner_token":"UUIDv4","coverage":"full","content_ids":[]}
+```
 
-UI status: today's saved brief without a receipt says source-check receipt not recorded. Older/missing briefs await today's publication/check before the deadline, and warn after it. A successful same-day daily no-change receipt is healthy even if content is older. A later failed same-day daily receipt warns. A five-minute foreground refresh and online/visibility refresh retrieve saved records; open editors/readers defer automatic refresh. Ordinary network errors retain data and drafts; authentication/owner failures lock and clear private UI.
+- Receipt scope: `daily_brief`, `two_week_sweep`, `career`, or `writing`. `two_week_sweep` covers Personal/SAFOJ/Writing. Scopes remain independent; a sweep does not cover the daily brief.
+- Outcome: `published`, `no_change`, or `failed`. Coverage: `full` or `partial`. Full means all required sources for that scope were actually checked. Partial never counts as a full successful check, including no-change.
+- `run_id`: string length 1–120 for legacy; UUID for extended receipts.
+- `claim_id`: UUID; `attempt`: integer 0 or 1; `owner_token`: UUIDv4 with RFC variant.
+- `scheduled_for`: intended run time; `checked_at`: actual outcome time. Extended records require parseable ISO date strings beginning YYYY-MM-DDT and ending Z or ±HH:MM. Legacy parsing requires the prefix and Date.parse validity but does not enforce a timezone suffix.
+- `content_id`: null or UUID. Extended records require any non-null value to appear in `content_ids`.
+- `content_ids`: unique UUID array, length 0–3. `published` requires at least one ID. `failed` requires an empty array and null `content_id`. All listed artifacts must exist in the owner's loaded notes/briefs for UI verification.
+- `message`: string length 0–500, safe status only. No credentials/raw connector output.
+- New claimed record body length must be **less than 3000 characters**. Row ID must be a UUID. All UUIDs use canonical 8-4-4-4-12 hexadecimal syntax. Legacy content_id validation remains the prior 36-character hexadecimal/hyphen check.
 
-## Exact version-1 reader validation
+A declared outcome/coverage is not independently proven research. Producers must follow the source-check and publication-readback rules; the UI only validates the saved linkage and declared status.
 
-- Row `section` must equal `today`. The reader does not validate row `brief_id`; publishers should use null.
-- Body must parse as a non-array JSON object with exactly all nine documented keys; additional or missing keys are rejected.
-- `type` equals `spore_run_receipt`; `v` is the number 1.
-- `run_id` is a string of length 1–120 (no additional character restriction).
-- `scope` and `outcome` must match the enumerations above. Version 1 accepts terminal outcomes only, not `started`.
-- `scheduled_for` and `checked_at` are strings beginning YYYY-MM-DDT and parseable by JavaScript Date.parse. Publishers must use explicit timezone offsets or Z; the current reader does not independently enforce a timezone suffix.
-- `content_id` is null or a 36-character string consisting only of hexadecimal characters and hyphens, case-insensitive. This is a syntax check, not a database existence/readback check.
-- `message` is a string of length 0–500.
-- `created_at` is carried as recorded_at, but does not prove source coverage or execution ownership.
+## Immutable claim
 
-Version 1 is a display contract, **not an execution claim or concurrency lock**. Do not use a read-then-insert v1 receipt as an atomic claim. A separately typed, strictly validated claim/terminal protocol with deterministic per-date identity, ownership, and source coverage is pending the recovery worker's contract. Do not add unrecognized fields to v1 or fabricate past checks.
+Exactly these nine keys are required; no extras:
+
+```json
+{"type":"spore_run_claim","v":1,"scope":"daily_brief","run_id":"UUIDv8","scheduled_for":"ISO timestamp","claimed_at":"ISO timestamp","attempt":0,"owner_token":"UUIDv4","terminal_id":"UUIDv8"}
+```
+
+The same row/size/date/UUID rules apply. Scope may also be `recovery_check`, which is **claim-only**, attempt 0 only, scheduled at 08:30 America/Phoenix. No recovery_check terminal receipt is accepted or required; it never affects source-freshness warnings or counts as research.
+
+Compute IDs by taking the first 16 bytes of SHA256 over UTF-8 JSON.stringify of the listed array. Set byte6 = (byte6 & 15) | 128 (UUIDv8), byte8 = (byte8 & 63) | 128 (RFC variant); format canonical lowercase UUID. PhoenixDate is YYYY-MM-DD in America/Phoenix derived from scheduled_for.
+
+- Claim row ID: `['spore-run-claim-v1', ownerUUID, scope, PhoenixDate, attempt]`
+- Terminal row ID: `['spore-run-receipt-v1', ownerUUID, scope, PhoenixDate, attempt]`
+- Logical run_id: `['spore-run-v1', ownerUUID, scope, PhoenixDate]` (stable across attempts)
+
+The tested implementation exports `SporeFreshness.runIds(owner, scope, date, attempt)` in `spore-ui/freshness.js`.
+
+## Execution ownership and recovery rules
+
+1. Generate a fresh UUIDv4 owner_token per execution. Atomically INSERT claim ON CONFLICT DO NOTHING, then exact-readback the complete claim. Only the token-matching insertion winner proceeds. A read-before-insert alone is not an atomic claim.
+2. Terminal row must match claim_id, attempt, owner_token, run_id, scope, scheduled_for and the deterministic terminal_id. UI requires claimed_at <= checked_at <= current time, and claim time not in the future.
+3. Persist content and read it back before a published terminal. Never declare failed after an uncertain/in-flight content write: reconcile the write instead. An unresolved claim is not permission to repeat an execution.
+4. Attempt 1 is allowed only after a linked, validated attempt-0 failed terminal and no accepted artifact or uncertain in-flight write. Its claim time must be at or after the previous terminal time. The UI checks the matching failed terminal with empty content references; the producer must additionally rule out uncertain external writes.
+5. No leases or elapsed-time takeover. Claim without matching terminal stays unresolved. After grace, show stalled/unverified, do not autorun again. No retries for recovery_check.
+6. Before an 08:30 recovery invocation, honor the primary 08:00–09:00 flexible run window. Do not duplicate an active sweep; defer to inspect after the window. UI grace ends at 09:30 Arizona.
+
+## User-visible freshness
+
+- Content publication date, browser sync time, and declared source-check completion are separate.
+- A validated linked terminal with full coverage and published/no_change is successful. Successful no-change does not require changing yesterday's useful content.
+- Partial coverage warns. Failed terminal warns. An active linked claim shows in progress, then stalled/unverified after grace.
+- A current saved brief without linked completion remains explicitly unverified; after grace it warns. Legacy/unlinked receipts never establish success.
+- `two_week_sweep` has its own status once records exist. `recovery_check` is excluded from source status.
+- Browser database reads never create receipts or establish research success.
+
+The dashboard is a reader of this contract, not the execution scheduler. It does not insert claims, choose execution owners, write receipts, or retry jobs.

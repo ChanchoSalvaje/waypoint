@@ -4,7 +4,7 @@ async function commitmentID(c){return SporeCommitments.valid(c)&&c.kind==='actio
 async function promoteCommitment(c){
  if(busy||!state)return;const epoch=workspaceEpoch,owner=state.owner;busy=true;
  if(!commitmentAdder||commitmentAdderEpoch!==epoch){commitmentAdderEpoch=epoch;commitmentAdder=SporeCommitments.createAdder(adapter,{isCurrent:o=>workspaceEpoch===epoch&&!!state&&state.owner===o});}
- try{const result=await commitmentAdder.add(owner,c);if(epoch!==workspaceEpoch||!state||state.owner!==owner)return;state=convertSnapshot(result.snapshot);render();notify(result.outcome==='created'?'Added to your checklist.':'Already on your checklist. Your saved changes are preserved.');if(result.outcome!=='created')openTask(state.tasks.find(t=>t.id===result.task.id));}
+ try{const result=await commitmentAdder.add(owner,c);if(epoch!==workspaceEpoch||!state||state.owner!==owner)return;const verifiedSnapshot=await checkedSnapshot(result.snapshot);if(epoch!==workspaceEpoch||!state||state.owner!==owner)return;state=convertSnapshot(verifiedSnapshot);render();notify(result.outcome==='created'?'Added to your checklist.':'Already on your checklist. Your saved changes are preserved.');if(result.outcome!=='created')openTask(state.tasks.find(t=>t.id===result.task.id));}
  catch(e){if(epoch!==workspaceEpoch)return;if(['AUTH','FORBIDDEN','SESSION_CHANGED'].includes(e.code))lockWorkspace();else notify(e.message||'Add not confirmed. Refresh before trying again.');}
  finally{busy=false;}
 }
