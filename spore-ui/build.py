@@ -17,7 +17,7 @@ for id,(key,alt) in extras.items():
  m=json.loads((P/f'assets/{id}.json').read_text());assert m['isPublicDomain']
  catalog[key]={'data':'data:image/jpeg;base64,'+base64.b64encode((P/f'assets/{id}.jpg').read_bytes()).decode(),'alt':alt,'credit':m['artistDisplayName']+' · '+('The Great Wave' if key=='wave' else 'The Oxbow' if key=='oxbow' else m['title'])+', '+m['objectDate']+' · Public domain','source':m['objectURL']}
 cat='const ArtCatalog='+json.dumps(catalog,ensure_ascii=False)+';\n'
-parts=[(P/n).read_text() for n in ['brief-renderer.js','model.js','spark.js']]+[cat]+[(P/n).read_text() for n in ['art-cycle.js','view.js']]+['/* BEGIN SPORE ACTION PRESENTATION */']+[(P/n).read_text() for n in ['visibility.js','commitments.js','action-view.js','freshness.js','cards.js']]
+parts=[(P/n).read_text() for n in ['brief-renderer.js','model.js','spark.js']]+[cat]+[(P/n).read_text() for n in ['art-cycle.js','view.js']]+['/* BEGIN SPORE ACTION PRESENTATION */']+[(P/n).read_text() for n in ['visibility.js','content-policy.js','commitments.js','action-view.js','freshness.js','cards.js']]
 presentation='/* BEGIN SPORE PRESENTATION */\n'+'\n'.join(parts)+'\n/* END SPORE PRESENTATION */\n'
 public.joinpath('index.html').write_text((P/'shell.html').read_text())
 public.joinpath('app.js').write_text(sdk+presentation+bridge)

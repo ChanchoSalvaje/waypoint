@@ -1,8 +1,8 @@
 'use strict';
 const M=BriefModel, KEY='unused-connected-no-demo-import';
 const $=id=>document.getElementById(id);
-const names={today:'Today',career:'Career',safoj:'SAFOJ',personal:'Personal',writing:'Writing Room'};
-const intro={career:'Your employment work, from the next application to the follow-up worth making.',safoj:'Reading, community commitments, and ideas worth exploring together.',personal:'Commitments, small practical things, and what matters beyond work.',writing:'A place for drafts, fragments, and whatever wants to become a story.'};
+const names={today:'Today',career:'Career',safoj:'SAFOJ & Jung',personal:'Personal',writing:'Writing Room'};
+const intro={career:'Your employment work, from the next application to the follow-up worth making.',safoj:'SAFOJ and Jung: meetings, reading, community and ideas.',personal:'Commitments, small practical things, and what matters beyond work.',writing:'A place for drafts, fragments, and whatever wants to become a story.'};
 // Presentation fixtures are deliberately separate from saved user state and future service adapters.
 const fixtures={decision:'Would a short board-support outline be useful this week?',commitments:[]};
 let previewOffset=0,sparkOpen=false,artDay=DailySpark.dayKey();
@@ -18,7 +18,7 @@ async function commit(action){
  catch(e){notify(e.message||'Save not confirmed. Your draft is retained.');return false;}
  finally{busy=false;}
 }
-function select(section){noteDrafts[active]=$('note').value;active=section;location.hash=section;document.querySelectorAll('[role=tab]').forEach(t=>{const selected=t.dataset.section===active;t.setAttribute('aria-selected',String(selected));t.tabIndex=selected?0:-1;});$('panel').setAttribute('aria-labelledby','tab-'+active);render();}
+function select(section){section=SporeContentPolicy.route(section);if(!Object.hasOwn(names,section))section='today';noteDrafts[active]=$('note').value;active=section;location.hash=section;document.querySelectorAll('[role=tab]').forEach(t=>{const selected=t.dataset.section===active;t.setAttribute('aria-selected',String(selected));t.tabIndex=selected?0:-1;});$('panel').setAttribute('aria-labelledby','tab-'+active);render();}
 async function toggleTask(t){const wasDone=t.done;if(await commit({kind:'toggle',id:t.id})){undoAction={id:t.id,wasDone,revision:state.revision};notify((wasDone?'Reopened: ':'Completed: ')+t.title);$('undo').focus();}}
 $('undo').addEventListener('click',async()=>{const u=undoAction;if(!u)return;const t=state.tasks.find(t=>t.id===u.id);if(!t||state.revision!==u.revision||t.done===u.wasDone){undoAction=null;notify('That change can no longer be undone here. Use the task details.');return;}if(await commit({kind:'toggle',id:u.id})){notify('Undone. Your task is restored.');$('add-task').focus();}});
 function meta(t,showSection=false){return [showSection?names[t.section]:null,t.due?'Due '+dateLabel(t.due):null,M.deferred(t,state.planningDate)?'Deferred to '+dateLabel(t.deferUntil):null,t.priority==='high'?'Priority':null,t.minutes+' min estimate'].filter(Boolean).join(' · ');}
@@ -87,7 +87,7 @@ function goDomain(key){select(key);$('section-title').tabIndex=-1;$('section-tit
 function render(){if(!state)return;renderArt();$('eyebrow').textContent=active==='today'?new Date().toLocaleDateString('en-US',{timeZone:'America/Phoenix',weekday:'long',month:'long',day:'numeric'}):'Workspace';$('section-title').textContent=active==='today'?'Today':names[active];$('section-description').textContent=active==='today'?'':intro[active];$('view').replaceChildren();if(active==='today')renderToday($('view'));else renderDomain($('view'));
  $('notes-title').textContent=active==='today'?'Notes for the day':'Working notes';$('note').value=noteDrafts[active]||'';const notes=state.notes.filter(n=>n.section===active).slice().reverse();$('notes').replaceChildren(...notes.map(n=>{const item=el('article','','note-entry');item.append(SporeBrief.renderBrief(document,n.body),el('time',new Date(n.at).toLocaleString(),'meta'));return item;}));const events=state.history.filter(h=>active==='today'||h.section===active).slice().reverse();$('history-list').replaceChildren(...events.map(h=>el('p',`${new Date(h.at).toLocaleString()} · ${names[h.section]} · ${h.text}`)));if(!events.length)$('history-list').append(el('p','No updates yet.','meta'));
 }
-function openTask(task,edit=false,inDomain=false){if(inDomain&&task)select(task.section);returnFocus=inDomain&&task?$('tab-'+task.section):document.activeElement;editing=task?.id||null;$('form-error').textContent='';$('task-detail').hidden=!task||edit;$('task-form').hidden=!!task&&!edit;
+function openTask(task,edit=false,inDomain=false){if(inDomain&&task)select(task.section);returnFocus=inDomain&&task?$('tab-'+SporeContentPolicy.route(task.section)):document.activeElement;editing=task?.id||null;$('form-error').textContent='';$('task-detail').hidden=!task||edit;$('task-form').hidden=!!task&&!edit;
  if(task&&!edit){const detail=$('task-detail');detail.replaceChildren(el('p',names[task.section],'kicker'),el('h2',task.title),el('p',meta(task),'meta'));if(task.why)detail.append(el('h3','Why this matters'),el('p',task.why));if(task.nextAction)detail.append(el('h3','Working details'),el('p',task.nextAction));if(task.section==='career')detail.append(el('p','No linked opportunity record','meta'));const actions=el('div','','actions');actions.append(button('Edit task',()=>showEditor(task),'primary'),button(task.done?'Reopen task':'Mark complete',()=>{closeTask();toggleTask(task);}));detail.append(actions);$('task-dialog').setAttribute('aria-labelledby','task-detail-title');detail.querySelector('h2').id='task-detail-title';}
  else fillEditor(task);
  if(!$('task-dialog').open)$('task-dialog').showModal();if(!task||edit)$('task-title').focus();else $('close-task').focus();
@@ -102,3 +102,5 @@ $('task-form').addEventListener('submit',async e=>{e.preventDefault();const old=
 $('note').addEventListener('input',()=>noteDrafts[active]=$('note').value);$('note-form').addEventListener('submit',async e=>{e.preventDefault();if(await commit({kind:'note',id:crypto.randomUUID(),section:active,body:$('note').value})){noteDrafts[active]='';$('note').value='';$('note').focus();}});
 const tabs=[...document.querySelectorAll('[role=tab]')];tabs.forEach((tab,i)=>{tab.addEventListener('click',()=>select(tab.dataset.section));tab.addEventListener('keydown',e=>{let n;if(e.key==='ArrowRight'||e.key==='ArrowDown')n=(i+1)%tabs.length;if(e.key==='ArrowLeft'||e.key==='ArrowUp')n=(i+tabs.length-1)%tabs.length;if(e.key==='Home')n=0;if(e.key==='End')n=tabs.length-1;if(n!==undefined){e.preventDefault();tabs[n].focus();select(tabs[n].dataset.section);}});});
 
+
+window.addEventListener('hashchange',()=>{const key=location.hash.slice(1);if(state&&key!==active&&key!=='main')select(key);});
