@@ -21285,24 +21285,7 @@ $('preview-day').addEventListener('click',()=>{previewOffset++;render();$('previ
 $('reset-day').addEventListener('click',()=>{previewOffset=0;render();$('preview-day').focus();});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshDailyPresentation();scheduleDayRefresh();}});
 
-function renderToday(view){
- view.append(sparkPanel());
- const picks=M.today(state).slice(0,3),focus=picks[0];const grid=el('div','','today-grid'),left=el('div'),right=el('aside','','day-aside');
- const brief=section('The brief','briefing');brief.append(SporeBrief.renderBrief(document,latestBrief?.body||'No daily brief has been published yet. Your saved actions and notes appear below.'));left.append(brief);
- if(focus){const hero=el('article','','focus');hero.dataset.taskId=focus.id;hero.append(el('p','Start here','kicker'),el('h2',focus.title),el('p',focus.why||'One manageable step from your current priorities.','reason'),el('p',meta(focus,true),'meta'));const actions=el('div','','actions');actions.append(button('Open in '+names[focus.section]+' →',()=>openTask(focus,false,true),'primary'),button('Mark complete',()=>toggleTask(focus)));hero.append(actions);left.append(hero);}
- else{const empty=section('Some breathing room.','focus');empty.append(el('p','No eligible open tasks. Your saved work is in its workspace.'));left.append(empty);}
- if(picks.length>1){const next=section('Then, if there’s room','secondary-actions');picks.slice(1).forEach(t=>next.append(taskRow(t,true)));left.append(next);}
- const planner=el('details','','planner');planner.append(el('summary','Check the time you have'));const estimate=M.plan(state).reduce((n,p)=>n+p.minutes,0);planner.append(el('p',`${estimate} minutes estimated across ${picks.length} suggested ${picks.length===1?'task':'tasks'}. Estimates stay unchanged.`));const label=el('label','Available minutes');label.htmlFor='available-minutes';const input=document.createElement('input');input.id='available-minutes';input.type='number';input.min=0;input.max=480;input.value=60;const result=el('p','','meta');result.setAttribute('aria-live','polite');const update=()=>{const v=Number(input.value);result.textContent=input.value===''||!Number.isFinite(v)||v<0||v>480?'Enter 0–480 minutes.':estimate>v?`${estimate-v} minutes over your available time. Defer a task or plan a smaller step.`:`${v-estimate} minutes left unallocated. No need to fill them.`;};input.addEventListener('input',update);update();planner.append(label,input,result);left.append(planner);
-
- const commitments=section('On the horizon','horizon');fixtures.commitments.forEach(([date,title,area,key])=>{const item=el('div','','appointment');item.append(el('span',/^\d{4}-\d{2}-\d{2}$/.test(date)?dateLabel(date):date,'appointment-date'),button(title,()=>goDomain(key)),el('small',area));commitments.append(item);});right.append(commitments);
- const progress=section('Completed','progress');const done=state.tasks.filter(t=>t.done);progress.append(el('p',done.length?`${done.length} ${done.length===1?'task':'tasks'} checked off.`:'Completed work will be here to revisit.'));done.slice(-3).forEach(t=>progress.append(button(t.title,()=>openTask(t,false,true),'progress-link')));right.append(progress);grid.append(left,right);view.append(grid);
-}
 function goDomain(key){select(key);$('section-title').tabIndex=-1;$('section-title').focus();}
-function renderDomain(view){const tasks=state.tasks.filter(t=>t.section===active);const groups=M.groups(state,active);const summary=el('div','','workspace-summary');summary.append(el('span',`${groups.active.length} active`),el('span',`${groups.waiting.length} deferred`),el('span',`${groups.completed.length} completed`));view.append(summary);
- if(active==='career')view.append(el('p','Plan the work here. Opportunity records and application stages stay in Airtable.','workspace-context'));
- if(active==='writing')view.append(el('p','Optional, without a quota. Appears in Today only when explicitly due, and always ranks last.','workspace-context'));
- for(const [key,title] of [['active','Active work'],['waiting','Waiting / deferred'],['completed','Completed']]){const group=key==='active'?section(title,'task-group'):el('details','','task-group');if(key!=='active'){group.append(el('summary',`${title} · ${groups[key].length}`));if(key==='waiting'&&groups[key].length)group.open=true;}if(!groups[key].length)group.append(el('p',key==='active'?'No active tasks. Capture something when you need it.':'Nothing here yet.','meta'));groups[key].forEach(t=>group.append(taskRow(t)));view.append(group);}
-}
 function render(){if(!state)return;renderArt();$('eyebrow').textContent=active==='today'?new Date().toLocaleDateString('en-US',{timeZone:'America/Phoenix',weekday:'long',month:'long',day:'numeric'}):'Workspace';$('section-title').textContent=active==='today'?'Today':names[active];$('section-description').textContent=active==='today'?'':intro[active];$('view').replaceChildren();if(active==='today')renderToday($('view'));else renderDomain($('view'));
  $('notes-title').textContent=active==='today'?'Notes for the day':'Working notes';$('note').value=noteDrafts[active]||'';const notes=state.notes.filter(n=>n.section===active).slice().reverse();$('notes').replaceChildren(...notes.map(n=>{const item=el('article','','note-entry');item.append(SporeBrief.renderBrief(document,n.body),el('time',new Date(n.at).toLocaleString(),'meta'));return item;}));const events=state.history.filter(h=>active==='today'||h.section===active).slice().reverse();$('history-list').replaceChildren(...events.map(h=>el('p',`${new Date(h.at).toLocaleString()} · ${names[h.section]} · ${h.text}`)));if(!events.length)$('history-list').append(el('p','No updates yet.','meta'));
 }
@@ -21322,6 +21305,71 @@ $('note').addEventListener('input',()=>noteDrafts[active]=$('note').value);$('no
 const tabs=[...document.querySelectorAll('[role=tab]')];tabs.forEach((tab,i)=>{tab.addEventListener('click',()=>select(tab.dataset.section));tab.addEventListener('keydown',e=>{let n;if(e.key==='ArrowRight'||e.key==='ArrowDown')n=(i+1)%tabs.length;if(e.key==='ArrowLeft'||e.key==='ArrowUp')n=(i+tabs.length-1)%tabs.length;if(e.key==='Home')n=0;if(e.key==='End')n=tabs.length-1;if(n!==undefined){e.preventDefault();tabs[n].focus();select(tabs[n].dataset.section);}});});
 
 
+/* BEGIN SPORE ACTION PRESENTATION */
+/* Reversible display-only exclusions for two explicitly identified acceptance fixtures.
+   Rows remain in Supabase. Never infer test data from titles/content. */
+(function(root){
+'use strict';
+const taskId='ec715082-5f0c-4ad6-b81b-ad55d1e3a7c7';
+const noteId='da3015e0-c6ae-49f4-ae20-01e9f7fec315';
+function snapshot(s){return {...s,tasks:s.tasks.filter(t=>t.id!==taskId),notes:s.notes.filter(n=>n.id!==noteId),history:s.history.filter(h=>h.entity_id!==taskId&&h.entity_id!==noteId)};}
+const api={snapshot};if(typeof module==='object'&&module.exports)module.exports=api;else root.SporeVisibility=api;
+})(globalThis);
+
+/* Shared publisher/UI contract and insert-only task reconciliation. No network client or credentials. */
+(function(root){
+'use strict';
+const sections=['career','safoj','personal','writing'];
+const fail=(code,message)=>{throw Object.assign(new Error(message),{code});};
+const text=(v,max)=>typeof v==='string'&&v.trim().length>0&&v.length<=max;
+const date=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v))&&new Date(v).toISOString().slice(0,10)===v;
+function sourceURL(value){if(value===undefined||value==='')return '';try{const u=new URL(value);if(value.length>1000||u.protocol!=='https:'||u.username||u.password||/[\s\\]/.test(value))return null;return value;}catch{return null;}}
+function valid(c){return !!c&&c.v===1&&text(c.id,160)&&/^[A-Za-z0-9][A-Za-z0-9:._/-]*$/.test(c.id)&&['action','event'].includes(c.kind)&&text(c.title,160)&&date(c.date)&&sections.includes(c.section)&&(c.why===undefined||typeof c.why==='string'&&c.why.length<=1000)&&(c.next_action===undefined||typeof c.next_action==='string'&&c.next_action.length<=800)&&sourceURL(c.source_url)!==null;}
+function references(list){const ids=new Map();for(const c of Array.isArray(list)?list:[])if(c?.id)ids.set(c.id,(ids.get(c.id)||0)+1);return (Array.isArray(list)?list:[]).filter(c=>c&&text(c.title,160)&&date(c.date)).map(c=>({...c,promotable:valid(c)&&c.kind==='action'&&ids.get(c.id)===1}));}
+function validatePublication(list){if(!Array.isArray(list)||JSON.stringify(list).length>5000)fail('VALIDATION','Commitments must be an array within the existing 5,000-character limit.');const ids=new Set();for(const c of list){if(!valid(c)||ids.has(c.id))fail('VALIDATION','Each new commitment needs a valid v1 contract and unique source occurrence ID.');ids.add(c.id);}return list;}
+async function taskID(owner,c){if(!text(owner,100)||!valid(c)||c.kind!=='action')fail('VALIDATION','A verified owner and structured action commitment are required.');const bytes=new Uint8Array(await root.crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(['spore-commitment-v1',owner,c.id]))));bytes[6]=(bytes[6]&15)|128;bytes[8]=(bytes[8]&63)|128;const h=[...bytes.slice(0,16)].map(b=>b.toString(16).padStart(2,'0')).join('');return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;}
+function payload(id,owner,c){return {id,user_id:owner,section:c.section,title:c.title,why:c.why||'From the published brief commitment.',next_action:[c.next_action,c.source_url?'Source: '+c.source_url:''].filter(Boolean).join('\n\n'),due:c.date,defer_until:null,priority:'normal',minutes:10,done:false,airtable_record_id:null};}
+function createAdder(adapter,{isCurrent=()=>true}={}){
+ const pending=new Map();
+ function guard(owner){if(!isCurrent(owner))fail('SESSION_CHANGED','Workspace changed. Reload before adding.');}
+ async function snapshot(owner){guard(owner);const s=await adapter.load();guard(owner);if(s.owner!==owner)fail('SESSION_CHANGED','Workspace owner changed.');return s;}
+ function find(s,id,owner){const row=s.tasks.find(t=>t.id===id);if(row&&row.user_id!==owner)fail('FORBIDDEN','Task ownership could not be verified.');return row;}
+ async function reconcile(owner,c,id){let s=await snapshot(owner),row=find(s,id,owner);if(row)return {task:row,snapshot:s,outcome:'existing'};
+  // Recheck against the latest canonical brief, never notes/prose or stale caller content.
+  const latest=s.briefs.slice().sort((a,b)=>b.brief_date.localeCompare(a.brief_date))[0];
+  const fresh=references(latest?.commitments).find(x=>x.id===c.id&&x.promotable);if(!fresh)fail('STALE','This suggestion is no longer available. Refresh the brief.');
+  let writeError=null;try{guard(owner);await adapter.createTask(payload(id,owner,fresh));guard(owner);}catch(e){if(['AUTH','FORBIDDEN','SESSION_CHANGED','VALIDATION'].includes(e.code))throw e;if(!['CONFLICT','UNKNOWN','SAVE'].includes(e.code))throw e;writeError=e;}
+  // Read authoritative state after success OR uncertain/conflicting outcome. Never retry or upsert.
+  s=await snapshot(owner);row=find(s,id,owner);if(row)return {task:row,snapshot:s,outcome:writeError?'reconciled':'created'};
+  if(writeError)throw writeError;fail('UNKNOWN','Task was not visible on reload. Keep the suggestion and retry only after checking access.');
+ }
+ return {async add(owner,c){const id=await taskID(owner,c);guard(owner);const key=owner+':'+id;if(pending.has(key))return pending.get(key);const p=reconcile(owner,c,id);pending.set(key,p);try{return await p;}finally{if(pending.get(key)===p)pending.delete(key);}}};
+}
+const api={valid,references,validatePublication,taskID,createAdder};if(typeof module==='object'&&module.exports)module.exports=api;else root.SporeCommitments=api;
+})(globalThis);
+
+function actionGroups(section){const all=state.tasks.filter(t=>!section||t.section===section);return {now:all.filter(t=>!t.done&&!M.deferred(t,state.planningDate)&&(!t.due||t.due<=state.planningDate)),upcoming:all.filter(t=>!t.done&&!M.deferred(t,state.planningDate)&&t.due>state.planningDate),deferred:all.filter(t=>!t.done&&M.deferred(t,state.planningDate)),completed:all.filter(t=>t.done)};}
+let commitmentAdder,commitmentAdderEpoch;
+async function commitmentID(c){return SporeCommitments.valid(c)&&c.kind==='action'?SporeCommitments.taskID(state.owner,c):null;}
+async function promoteCommitment(c){
+ if(busy||!state)return;const epoch=workspaceEpoch,owner=state.owner;busy=true;
+ if(!commitmentAdder||commitmentAdderEpoch!==epoch){commitmentAdderEpoch=epoch;commitmentAdder=SporeCommitments.createAdder(adapter,{isCurrent:o=>workspaceEpoch===epoch&&!!state&&state.owner===o});}
+ try{const result=await commitmentAdder.add(owner,c);if(epoch!==workspaceEpoch||!state||state.owner!==owner)return;state=convertSnapshot(result.snapshot);render();notify(result.outcome==='created'?'Added to your checklist.':'Already on your checklist. Your saved changes are preserved.');if(result.outcome!=='created')openTask(state.tasks.find(t=>t.id===result.task.id));}
+ catch(e){if(epoch!==workspaceEpoch)return;if(['AUTH','FORBIDDEN','SESSION_CHANGED'].includes(e.code))lockWorkspace();else notify(e.message||'Add not confirmed. Refresh before trying again.');}
+ finally{busy=false;}
+}
+function suggestionPanel(){
+ const suggestions=SporeCommitments.references(latestBrief?.commitments).filter(c=>c.promotable).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);
+ if(!suggestions.length)return null;
+ const box=section('Suggested actions','suggestions');box.append(el('p','From your brief. Add an action to save it to your checklist.','meta'));
+ for(const c of suggestions){const row=el('article','','suggestion-card');row.append(el('h3',c.title),el('p',c.next_action||c.why||('Due '+dateLabel(c.date))));row.append(button('Add to checklist',()=>promoteCommitment(c),'primary'));commitmentID(c).then(id=>{if(state?.tasks.some(t=>t.id===id)){row.remove();if(!box.querySelector('.suggestion-card'))box.remove();}});box.append(row);}return box;
+}
+function commitmentList(sectionKey){const box=section('Upcoming commitments','commitments');const items=SporeCommitments.references(latestBrief?.commitments).filter(c=>(!sectionKey||c.section===sectionKey)&&c.date>=state.planningDate).sort((a,b)=>a.date.localeCompare(b.date));if(!items.length)box.append(el('p','No upcoming commitments in the latest brief.','meta'));for(const c of items){const row=el('article','','commitment-row');row.append(el('p',dateLabel(c.date)+' · '+(names[c.section]||'Personal'),'meta'),el('h3',c.title));if(c.source_url){row.append(SporeBrief.renderBrief(document,'[Source & context]('+c.source_url+')'));}if(c.promotable){const b=button('Add to checklist',()=>promoteCommitment(c));commitmentID(c).then(id=>{const saved=state?.tasks.find(t=>t.id===id);if(saved)b.textContent=saved.done?'Completed · view task':'Added · view task';});row.append(b);}else row.append(el('small',c.kind==='event'?'Scheduled event · not a checklist task':'Reference only · add a separate task if you need one'));box.append(row);}return box;}
+function actionCard(t){const card=el('article','','action-card');card.dataset.taskId=t.id;card.append(el('p',meta(t,true),'meta'),el('h3',t.title));if(t.nextAction)card.append(el('p',t.nextAction.length>180?t.nextAction.slice(0,177)+'…':t.nextAction,'next-step'));const details=el('details','','action-evidence');details.append(el('summary','Why & details'),SporeBrief.renderBrief(document,[t.why,t.nextAction].filter(Boolean).join('\n\n')));const actions=el('div','','actions');actions.append(button('Mark complete',()=>toggleTask(t),'primary'),button('Edit / defer',()=>openTask(t,true)));card.append(actions,details);return card;}
+function fullBrief(){const d=el('details','','full-brief');d.append(el('summary','Read the full brief & sources'),SporeBrief.renderBrief(document,latestBrief?.body||'No brief published yet.'));return d;}
+function renderToday(view){const groups=actionGroups(),eligible=new Set(groups.now.map(t=>t.id));const picks=M.today(state).filter(t=>eligible.has(t.id)).slice(0,3);const top=section('Your next steps','next-actions');top.append(el('p',picks.length?'A short list from your saved tasks. Everything else stays in its section.':'No open tasks for today.','meta'));picks.forEach(t=>top.append(actionCard(t)));view.append(top);if(!picks.length){const suggestions=suggestionPanel();if(suggestions)view.append(suggestions);}const grid=el('div','','action-columns');const left=el('div');left.append(fullBrief());const upcoming=section('Upcoming tasks');groups.upcoming.sort((a,b)=>a.due.localeCompare(b.due)).forEach(t=>upcoming.append(taskRow(t,true)));if(!groups.upcoming.length)upcoming.append(el('p','No future-dated tasks.','meta'));left.append(upcoming);grid.append(left,commitmentList());view.append(grid);const extras=el('details','','quiet-work');extras.append(el('summary',`${groups.deferred.length} deferred · ${groups.completed.length} completed`));groups.deferred.concat(groups.completed).forEach(t=>extras.append(taskRow(t,true)));view.append(extras);view.append(sparkPanel());}
+function renderDomain(view){const groups=actionGroups(active);const summary=el('p',`${groups.now.length} ready · ${groups.upcoming.length} upcoming · ${groups.deferred.length} deferred · ${groups.completed.length} completed`,'workspace-context');view.append(summary);if(active==='career')view.append(el('p','Job records and application stages remain in Airtable. These are your dashboard actions.','meta'));for(const [key,title]of [['now','Ready to work on'],['upcoming','Upcoming tasks'],['deferred','Deferred / revisit'],['completed','Completed']]){const box=key==='completed'?el('details','','task-group'):section(title,'task-group');if(key==='completed')box.append(el('summary',title+' · '+groups[key].length));if(!groups[key].length&&key!=='completed')box.append(el('p','No tasks in this group.','meta'));groups[key].forEach(t=>box.append(taskRow(t)));view.append(box);}view.append(commitmentList(active));}
+
 /* END SPORE PRESENTATION */
 let busy=false,latestBrief=null,taskVersions=new Map(),workspaceEpoch=0,loadCounter=0;
 const client=SporeSDK.publicClient(SporeSDK.createClient,{url:'https://ujsliyqjzyofcytcemhs.supabase.co',publishableKey:'sb_publishable_aeVSmS8RJ5SotDmQdtaZig_HjzagE8X',redirectTo:SporeSDK.CALLBACK});
@@ -21330,9 +21378,10 @@ function showSignIn(show){$('login-form').hidden=!show;$('sign-in-help').hidden=
 function authMessage(text){$('auth-message').textContent=text;}
 function lockWorkspace(){if($('set-password-form'))$('set-password-form').reset();if($('login-password'))$('login-password').value='';showSignIn(false);workspaceEpoch++;loadCounter++;state=null;latestBrief=null;taskVersions.clear();noteDrafts={};editing=null;undoAction=null;document.querySelector('.studio').hidden=true;$('auth-gate').hidden=false;$('view').replaceChildren();$('notes').replaceChildren();$('history-list').replaceChildren();$('task-detail').replaceChildren();$('task-form').reset();$('note').value='';if($('task-dialog').open)$('task-dialog').close();authMessage('Workspace locked. Sign in or check access again.');}
 function convertSnapshot(s){
+ s=SporeVisibility.snapshot(s);
  taskVersions=new Map(s.tasks.map(t=>[t.id,t.revision]));latestBrief=s.briefs.sort((a,b)=>b.brief_date.localeCompare(a.brief_date))[0]||null;
  fixtures.commitments=(latestBrief?.commitments||[]).filter(c=>c&&typeof c.title==='string'&&typeof c.date==='string').map(c=>[c.date,c.title,names[c.section]||'Personal',Object.hasOwn(names,c.section)?c.section:'personal']);
- return {version:2,revision:0,mode:'connected',planningDate:DailySpark.dayKey(),generatedAt:new Date().toISOString(),tasks:s.tasks.map(t=>({...t,nextAction:t.next_action,deferUntil:t.defer_until||'',due:t.due||'',opportunityRef:t.airtable_record_id})),notes:s.notes.map(n=>({...n,at:n.created_at})),history:s.history.map(h=>({...h,at:h.created_at,text:h.kind.replaceAll('_',' ')}))};
+ return {owner:s.owner,version:2,revision:0,mode:'connected',planningDate:DailySpark.dayKey(),generatedAt:new Date().toISOString(),tasks:s.tasks.map(t=>({...t,nextAction:t.next_action,deferUntil:t.defer_until||'',due:t.due||'',opportunityRef:t.airtable_record_id})),notes:s.notes.map(n=>({...n,at:n.created_at})),history:s.history.map(h=>({...h,at:h.created_at,text:h.kind.replaceAll('_',' ')}))};
 }
 async function loadConnected(){const ticket=++loadCounter,epoch=workspaceEpoch;try{const s=await adapter.load();if(ticket!==loadCounter||epoch!==workspaceEpoch)return false;state=convertSnapshot(s);$('auth-gate').hidden=true;document.querySelector('.studio').hidden=false;select(Object.hasOwn(names,active)?active:'today');return true;}catch(e){if(ticket!==loadCounter||epoch!==workspaceEpoch)return false;lockWorkspace();showSignIn(e.code==='AUTH');authMessage(e.code==='FORBIDDEN'?'Your email is verified. Workspace access is awaiting activation; use Check access again after activation.':e.code==='AUTH'?'Sign in with your invited account.':'Could not load the workspace. Check your connection and try again.');return false;}}
 function payload(t){return {id:t.id,section:t.section,title:t.title,why:t.why,next_action:t.nextAction,due:t.due||null,defer_until:t.deferUntil||null,priority:t.priority,minutes:t.minutes,done:t.done,airtable_record_id:t.opportunityRef||null};}
