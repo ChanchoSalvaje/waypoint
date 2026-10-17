@@ -13,7 +13,7 @@ function button(label,fn,cls='text-button'){const b=el('button',label,cls);b.typ
 function notify(message){$('feedback').hidden=false;$('status').textContent=message;$('undo').hidden=!undoAction;}
 function storageNotice(){ $('storage-notice').textContent=storageOK?'Changes are stored only in this browser. Clearing browser data removes them; there is no device or chat sync.':'Storage is unavailable or unreadable. Changes last only until reload. Existing stored data has not been overwritten.';if(!storageOK){$('disclosure').open=true;$('disclosure').querySelector('summary').textContent='Synthetic preview · session only';} }
 async function commit(action){
- if(busy){notify('Wait for the current save.');return false;}busy=true;
+ if(busy){notify('Wait for the current save.');return false;}loadCounter++;busy=true;
  try {await saveConnected(action);undoAction=null;render();notify('Saved to your private workspace.');return true;}
  catch(e){notify(e.message||'Save not confirmed. Your draft is retained.');return false;}
  finally{busy=false;}
@@ -68,10 +68,11 @@ function sparkPanel(){
  const a=el('a',d.source+' ↗','spark-source');a.href=d.url;a.target='_blank';a.rel='noopener noreferrer';a.referrerPolicy='no-referrer';discovery.append(a,explore(d.question));contents.append(lens,discovery);panel.append(contents);copy.append(panel);wrapper.append(copy);return wrapper;
 }
 function refreshDailyPresentation(){
- if(!state)return;const spark=$('spark-feature');if(artDay===DailySpark.dayKey()&&(!spark||spark.dataset.day===selectedArtDay()))return;
- // Only replace art/date nodes. Note input, planner, task editor, selection and focus stay mounted.
- renderArt();if(active==='today'){$('eyebrow').textContent=new Date().toLocaleDateString('en-US',{timeZone:'America/Phoenix',weekday:'long',month:'long',day:'numeric'});const old=$('spark-feature');if(old){if(old.contains(document.activeElement))return;old.replaceWith(sparkPanel());}}
+ if(!state)return;const today=DailySpark.dayKey();if(state.planningDate===today&&artDay===today)return;
+ noteDrafts[active]=$('note').value;state.planningDate=today;renderArt();
+ if(!$('task-dialog').open&&!$('detail-reader')?.open){const focused=document.activeElement;const inView=$('view').contains(focused);if(!inView)render();else{renderFreshness();notify('A new Arizona day has begun. Refresh to update the action view.');}}else renderFreshness();
 }
+
 let dayTimer;
 function scheduleDayRefresh(){clearTimeout(dayTimer);dayTimer=setTimeout(()=>{refreshDailyPresentation();scheduleDayRefresh();},ArtCycle.untilMidnight());}
 scheduleDayRefresh();

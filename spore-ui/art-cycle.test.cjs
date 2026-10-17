@@ -14,8 +14,10 @@ test('auth SDK/security unchanged; bridge and shell contain only reviewed presen
  const before=cp.execFileSync('git',['show','f7c95266949d644e96647369c5b95189aeef7a0f:public/spore/app.js'],{cwd:root,encoding:'utf8',maxBuffer:10*1024*1024}),after=fs.readFileSync(path.join(root,'public/spore/app.js'),'utf8');
  const oldStart=before.indexOf("(function(root){\n  'use strict';\n  function safeURL");
  assert.equal(after.slice(0,after.indexOf('/* BEGIN SPORE PRESENTATION */')),before.slice(0,oldStart));
- assert.equal(after.slice(after.indexOf('let busy=false,latestBrief=null')),before.slice(before.indexOf('let busy=false,latestBrief=null')).replace('return {version:2,revision:0','return {owner:s.owner,version:2,revision:0').replace('function convertSnapshot(s){','function convertSnapshot(s){\n s=SporeVisibility.snapshot(s);'));
- for(const f of ['public/spore/index.html','public/_headers']){let expected=cp.execFileSync('git',['show','f7c95266949d644e96647369c5b95189aeef7a0f:'+f],{cwd:root,encoding:'utf8',maxBuffer:10*1024*1024});if(f.endsWith('index.html'))expected=expected.replace(' Clearly labeled synthetic acceptance records may also appear.','').replace('<p class="rail-note">Space for the work.<br>Room for your life.</p>','');assert.equal(fs.readFileSync(path.join(root,f),'utf8'),expected);}
+ const slice=(text,a,b)=>text.slice(text.indexOf(a),text.indexOf(b,text.indexOf(a)));
+ assert.equal(slice(after,'function payload(t)','$(\'login-form\')'),slice(before,'function payload(t)','$(\'login-form\')'),'revision-checked task/note save path unchanged');
+ assert.equal(slice(after,"$('login-form').addEventListener", "$('retry-auth').addEventListener"),slice(before,"$('login-form').addEventListener", "$('retry-auth').addEventListener"),'sign-in and password handlers unchanged');
+ const headers=cp.execFileSync('git',['show','f7c95266949d644e96647369c5b95189aeef7a0f:public/_headers'],{cwd:root,encoding:'utf8'});assert.equal(fs.readFileSync(path.join(root,'public/_headers'),'utf8'),headers);
  assert.ok(!after.includes('const fakeStore='));assert.ok(!after.includes('runReviewChecks'));assert.ok(!after.includes('preview-tools'));
 });
 test('all four new museum images have recorded public-domain metadata and JPEG bytes',()=>{

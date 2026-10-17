@@ -5,7 +5,8 @@ P=Path(__file__).parent; public=P.parent/'public/spore'
 a=public.joinpath('app.js').read_text()
 start=a.index('/* BEGIN SPORE PRESENTATION */') if '/* BEGIN SPORE PRESENTATION */' in a else a.index("(function(root){\n  'use strict';\n  function safeURL")
 end=a.index('let busy=false,latestBrief=null',start)
-sdk,bridge=a[:start],a[end:]
+sdk=a[:start]
+bridge=(P/'connected.js').read_text()
 bridge=bridge.replace('return {version:2,revision:0', 'return {owner:s.owner,version:2,revision:0')
 if 's=SporeVisibility.snapshot(s);' not in bridge:
  bridge=bridge.replace('function convertSnapshot(s){','function convertSnapshot(s){\n s=SporeVisibility.snapshot(s);')
@@ -16,11 +17,11 @@ for id,(key,alt) in extras.items():
  m=json.loads((P/f'assets/{id}.json').read_text());assert m['isPublicDomain']
  catalog[key]={'data':'data:image/jpeg;base64,'+base64.b64encode((P/f'assets/{id}.jpg').read_bytes()).decode(),'alt':alt,'credit':m['artistDisplayName']+' · '+('The Great Wave' if key=='wave' else 'The Oxbow' if key=='oxbow' else m['title'])+', '+m['objectDate']+' · Public domain','source':m['objectURL']}
 cat='const ArtCatalog='+json.dumps(catalog,ensure_ascii=False)+';\n'
-parts=[(P/n).read_text() for n in ['brief-renderer.js','model.js','spark.js']]+[cat]+[(P/n).read_text() for n in ['art-cycle.js','view.js']]+['/* BEGIN SPORE ACTION PRESENTATION */']+[(P/n).read_text() for n in ['visibility.js','commitments.js','action-view.js']]
+parts=[(P/n).read_text() for n in ['brief-renderer.js','model.js','spark.js']]+[cat]+[(P/n).read_text() for n in ['art-cycle.js','view.js']]+['/* BEGIN SPORE ACTION PRESENTATION */']+[(P/n).read_text() for n in ['visibility.js','commitments.js','action-view.js','freshness.js','cards.js']]
 presentation='/* BEGIN SPORE PRESENTATION */\n'+'\n'.join(parts)+'\n/* END SPORE PRESENTATION */\n'
 public.joinpath('index.html').write_text((P/'shell.html').read_text())
 public.joinpath('app.js').write_text(sdk+presentation+bridge)
-public.joinpath('app.css').write_text((P/'base.css').read_text()+'\n'+(P/'ui.css').read_text()+'\n'+(P/'action-view.css').read_text())
+public.joinpath('app.css').write_text((P/'cards.css').read_text())
 # Existing auth shell stays byte-identical; all demo affordances are confined to the separate preview.
 args=argparse.ArgumentParser();args.add_argument('--preview-dir');opts=args.parse_args()
 if opts.preview_dir:

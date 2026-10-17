@@ -21216,7 +21216,7 @@ function button(label,fn,cls='text-button'){const b=el('button',label,cls);b.typ
 function notify(message){$('feedback').hidden=false;$('status').textContent=message;$('undo').hidden=!undoAction;}
 function storageNotice(){ $('storage-notice').textContent=storageOK?'Changes are stored only in this browser. Clearing browser data removes them; there is no device or chat sync.':'Storage is unavailable or unreadable. Changes last only until reload. Existing stored data has not been overwritten.';if(!storageOK){$('disclosure').open=true;$('disclosure').querySelector('summary').textContent='Synthetic preview · session only';} }
 async function commit(action){
- if(busy){notify('Wait for the current save.');return false;}busy=true;
+ if(busy){notify('Wait for the current save.');return false;}loadCounter++;busy=true;
  try {await saveConnected(action);undoAction=null;render();notify('Saved to your private workspace.');return true;}
  catch(e){notify(e.message||'Save not confirmed. Your draft is retained.');return false;}
  finally{busy=false;}
@@ -21271,10 +21271,11 @@ function sparkPanel(){
  const a=el('a',d.source+' ↗','spark-source');a.href=d.url;a.target='_blank';a.rel='noopener noreferrer';a.referrerPolicy='no-referrer';discovery.append(a,explore(d.question));contents.append(lens,discovery);panel.append(contents);copy.append(panel);wrapper.append(copy);return wrapper;
 }
 function refreshDailyPresentation(){
- if(!state)return;const spark=$('spark-feature');if(artDay===DailySpark.dayKey()&&(!spark||spark.dataset.day===selectedArtDay()))return;
- // Only replace art/date nodes. Note input, planner, task editor, selection and focus stay mounted.
- renderArt();if(active==='today'){$('eyebrow').textContent=new Date().toLocaleDateString('en-US',{timeZone:'America/Phoenix',weekday:'long',month:'long',day:'numeric'});const old=$('spark-feature');if(old){if(old.contains(document.activeElement))return;old.replaceWith(sparkPanel());}}
+ if(!state)return;const today=DailySpark.dayKey();if(state.planningDate===today&&artDay===today)return;
+ noteDrafts[active]=$('note').value;state.planningDate=today;renderArt();
+ if(!$('task-dialog').open&&!$('detail-reader')?.open){const focused=document.activeElement;const inView=$('view').contains(focused);if(!inView)render();else{renderFreshness();notify('A new Arizona day has begun. Refresh to update the action view.');}}else renderFreshness();
 }
+
 let dayTimer;
 function scheduleDayRefresh(){clearTimeout(dayTimer);dayTimer=setTimeout(()=>{refreshDailyPresentation();scheduleDayRefresh();},ArtCycle.untilMidnight());}
 scheduleDayRefresh();
@@ -21370,20 +21371,91 @@ function fullBrief(){const d=el('details','','full-brief');d.append(el('summary'
 function renderToday(view){const groups=actionGroups(),eligible=new Set(groups.now.map(t=>t.id));const picks=M.today(state).filter(t=>eligible.has(t.id)).slice(0,3);const top=section('Your next steps','next-actions');top.append(el('p',picks.length?'A short list from your saved tasks. Everything else stays in its section.':'No open tasks for today.','meta'));picks.forEach(t=>top.append(actionCard(t)));view.append(top);if(!picks.length){const suggestions=suggestionPanel();if(suggestions)view.append(suggestions);}const grid=el('div','','action-columns');const left=el('div');left.append(fullBrief());const upcoming=section('Upcoming tasks');groups.upcoming.sort((a,b)=>a.due.localeCompare(b.due)).forEach(t=>upcoming.append(taskRow(t,true)));if(!groups.upcoming.length)upcoming.append(el('p','No future-dated tasks.','meta'));left.append(upcoming);grid.append(left,commitmentList());view.append(grid);const extras=el('details','','quiet-work');extras.append(el('summary',`${groups.deferred.length} deferred · ${groups.completed.length} completed`));groups.deferred.concat(groups.completed).forEach(t=>extras.append(taskRow(t,true)));view.append(extras);view.append(sparkPanel());}
 function renderDomain(view){const groups=actionGroups(active);const summary=el('p',`${groups.now.length} ready · ${groups.upcoming.length} upcoming · ${groups.deferred.length} deferred · ${groups.completed.length} completed`,'workspace-context');view.append(summary);if(active==='career')view.append(el('p','Job records and application stages remain in Airtable. These are your dashboard actions.','meta'));for(const [key,title]of [['now','Ready to work on'],['upcoming','Upcoming tasks'],['deferred','Deferred / revisit'],['completed','Completed']]){const box=key==='completed'?el('details','','task-group'):section(title,'task-group');if(key==='completed')box.append(el('summary',title+' · '+groups[key].length));if(!groups[key].length&&key!=='completed')box.append(el('p','No tasks in this group.','meta'));groups[key].forEach(t=>box.append(taskRow(t)));view.append(box);}view.append(commitmentList(active));}
 
+(function(root){
+ 'use strict';
+ const scopes=['daily_brief','career','writing'];
+ function receipt(n){try{
+  const r=JSON.parse(n.body),keys=['type','v','run_id','scope','scheduled_for','checked_at','outcome','content_id','message'];
+  const iso=x=>typeof x==='string'&&/^\d{4}-\d{2}-\d{2}T/.test(x)&&Number.isFinite(Date.parse(x));
+  if(!r||Array.isArray(r)||Object.keys(r).some(k=>!keys.includes(k))||keys.some(k=>!Object.hasOwn(r,k))||r.type!=='spore_run_receipt'||r.v!==1||n.section!=='today'||!scopes.includes(r.scope)||!['published','no_change','failed'].includes(r.outcome)||typeof r.run_id!=='string'||r.run_id.length<1||r.run_id.length>120||!iso(r.checked_at)||!iso(r.scheduled_for)||!(r.content_id===null||(typeof r.content_id==='string'&&/^[a-f0-9-]{36}$/i.test(r.content_id)))||typeof r.message!=='string'||r.message.length>500)return null;
+  return {...r,recorded_at:n.created_at};
+ }catch{return null;}}
+
+ function day(now=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Phoenix',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
+ function assess(brief,receipts=[],now=new Date()){
+  const today=day(now),deadline=Date.parse(today+'T09:30:00-07:00');
+  const runs=receipts.filter(r=>r.scope==='daily_brief'&&day(new Date(r.scheduled_for))===today&&Date.parse(r.checked_at)<=now.getTime()).sort((a,b)=>Date.parse(b.checked_at)-Date.parse(a.checked_at));
+  const last=runs[0],success=runs.find(r=>r.outcome!=='failed');
+  if(last?.outcome==='failed')return {kind:'warning',text:'Daily check reported a failure. Last saved content remains available.',last,success};
+  if(success)return {kind:'ok',text:success.outcome==='no_change'?'Daily check completed · no material changes.':'Daily publication confirmed by its run receipt.',last,success};
+  if(brief?.brief_date===today)return {kind:'ok',text:'Today’s brief is saved. Source-check receipt not recorded.',last,success};
+  return {kind:now.getTime()>=deadline?'warning':'pending',text:now.getTime()>=deadline?'Daily brief or successful check overdue · expected by 9:30 a.m. Arizona.':'Awaiting today’s brief or check · due by 9:30 a.m. Arizona.',last,success};
+ }
+ const api={receipt,assess,day};if(typeof module==='object')module.exports=api;else root.SporeFreshness=api;
+})(typeof globalThis==='object'?globalThis:this);
+
+// Presentation only: saved prose becomes reading cards, never tasks or commitments.
+const reader=el('dialog','','detail-reader');reader.id='detail-reader';reader.setAttribute('aria-labelledby','reader-title');const readerTop=el('div','','reader-top'),readerTitle=el('h2');readerTitle.id='reader-title';const readerClose=button('Close details',()=>reader.close(),'button secondary'),readerBody=el('div','','reader-body');readerTop.append(readerTitle,readerClose);reader.append(readerTop,readerBody);document.body.append(reader);let readerReturn=null;
+reader.addEventListener('close',()=>{if(readerReturn?.isConnected)readerReturn.focus();else $('tab-'+active).focus();});
+function readDetails(title,body){readerReturn=document.activeElement;readerTitle.textContent=title;readerBody.replaceChildren(typeof body==='string'?SporeBrief.renderBrief(document,body):body);reader.showModal();readerClose.focus();}
+function detailButton(label,body){return button(label+' →',()=>readDetails(label,body),'detail-link');}
+function savedTime(value){return value&&Number.isFinite(Date.parse(value))?new Intl.DateTimeFormat('en-US',{timeZone:'America/Phoenix',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(value))+' Arizona':'Not recorded';}
+function noteParts(note){const blocks=note.body.split(/\n\s*\n/).filter(Boolean);return {title:(blocks[0]||'Saved note').split('\n')[0].replace(/^#+\s*/,''),blocks};}
+function newestNote(sectionKey){return state.notes.filter(n=>n.section===sectionKey).sort((a,b)=>Date.parse(b.created_at||b.at)-Date.parse(a.created_at||a.at))[0];}
+function savedLabel(n){return el('p','Saved '+savedTime(n.created_at||n.at),'saved-label');}
+function cardHeading(title,kicker){const h=el('div','','section-head');h.append(el('h2',title));if(kicker)h.append(el('span',kicker,'muted'));return h;}
+function proseCard(note,compact=false){const {title,blocks}=noteParts(note),c=el('article','','card source-feature'+(note.section==='writing'?' writing-card':''));c.dataset.noteId=note.id;const heading=note.section==='writing'?title.replace(/^Writing Room\s*[•·—:]\s*/i,''):title;c.append(el('p',names[note.section]||'Saved note','eyebrow'),el('h2',heading),savedLabel(note));const paragraphs=blocks.slice(1).filter(b=>!/^https?:/.test(b));const checkpoint=note.section==='writing'?paragraphs.find(p=>/checkpoint/i.test(p)):null;const text=paragraphs.find(p=>p!==checkpoint)||'';c.append(el('p',text.length>320?text.slice(0,317)+'…':text,'writing-hook'));if(note.section==='writing'&&!compact){const prompt=paragraphs.find(p=>p!==checkpoint&&p!==text);if(prompt)c.append(el('p',prompt.length>320?prompt.slice(0,317)+'…':prompt,'writing-instruction'));if(checkpoint){const box=el('div','','checkpoint');box.append(el('span','Saved checkpoint context','mini-label'),el('p',checkpoint));c.append(box);}}c.append(detailButton('View details & sources',note.body));return c;}
+
+function applicationCards(note){
+ const blocks=noteParts(note).blocks;const picks=blocks.filter(b=>/^Apply (first|next):/i.test(b));if(!picks.length)return proseCard(note);
+ const box=el('section','','applications');box.append(cardHeading('Application picks','Saved recommendations'),savedLabel(note));const grid=el('div','','pick-grid');
+ picks.forEach((block,i)=>{const line=block.split('\n')[0],label=line.match(/^Apply (first|next):/i)[0].replace(':',''),text=line.replace(/^Apply (first|next):\s*/i,'');const split=text.indexOf(' — ');const company=split>=0?text.slice(0,split):'Application recommendation',description=split>=0?text.slice(split+3):text;const firstStop=description.indexOf('. ');const role=firstStop>=0?description.slice(0,firstStop):description;const remainder=firstStop>=0?description.slice(firstStop+2):'';const c=el('article','','card pick-card '+(i===0?'lead-pick':'second-pick'));const top=el('div','','card-top');top.append(el('span',label,'eyebrow'),el('span',String(i+1).padStart(2,'0'),'rank'));c.append(top,el('h3',company),el('p',role,'role-title'));const salary=remainder.match(/\$[\d,.]+[Kk]?\s*[–—-]\s*\$?[\d,.]+[Kk]?/);if(salary){const facts=el('div','','facts');facts.append(el('span',salary[0]));c.append(facts);}c.append(el('p',remainder.length>420?remainder.slice(0,417)+'…':remainder,'pick-summary'));const actions=el('div','','card-actions');const url=block.match(/https:\/\/[^\s]+/);if(url&&SporeBrief.safeURL(url[0])){const a=el('a','View role ↗','button '+(i===0?'on-dark':'secondary'));a.href=url[0];a.target='_blank';a.rel='noopener noreferrer';actions.append(a);}actions.append(detailButton('View details',note.body));c.append(actions);grid.append(c);});box.append(grid,detailButton('Comparison, caveats & all sources',note.body));return box;
+}
+function checklistCard(sectionKey){const groups=actionGroups(sectionKey),c=el('section','','card checklist');c.append(cardHeading('Your checklist',`${groups.now.length} ready`));if(!groups.now.length)c.append(el('p','No ready tasks.','muted'));for(const t of groups.now)c.append(taskRow(t,!sectionKey));for(const [k,title] of [['upcoming','Upcoming tasks'],['deferred','Deferred'],['completed','Completed']]){const d=el('details','','task-disclosure');d.append(el('summary',`${title} · ${groups[k].length}`));for(const t of groups[k])d.append(taskRow(t,!sectionKey));c.append(d);}c.append(button('Add a task',()=>openTask(null,true),'detail-link'));return c;}
+function briefCard(){const c=el('section','','card context-card');c.append(el('p','Saved daily brief','eyebrow'),el('h2',latestBrief?'Brief for '+dateLabel(latestBrief.brief_date):'No brief published'));if(latestBrief){const intro=latestBrief.body.split(/\n\s*\n/).find(p=>p.length>50&&!/^https?:/.test(p))||'';c.append(el('p',intro.length>220?intro.slice(0,217)+'…':intro));if(latestBrief.created_at)c.append(el('p','Published '+savedTime(latestBrief.created_at),'saved-label'));c.append(detailButton('Read the brief & sources',latestBrief.body));}return c;}
+function artCardLive(){const c=el('section','','card art-card');c.id='live-art-card';const key=selectedArtDay(),pick=ArtCycle.resolve(active,key,ArtCatalog);c.append(el('p','Daily art · '+dateLabel(key),'eyebrow'),artworkFigure(pick.asset,'',active,key));if(active==='today'){const b=button('A reflection & a story →',()=>readDetails('Daily Spark',sparkPanel()),'detail-link');c.append(b);}return c;}
+function renderArt(){artDay=DailySpark.dayKey();$('art-figure').hidden=true;$('art-caption').textContent='Artwork changes at midnight in Arizona. Seven-day collection.';$('reset-day').hidden=previewOffset===0;const old=$('live-art-card');if(old)old.replaceWith(artCardLive());}
+function renderFreshness(){if(!state)return;const f=SporeFreshness.assess(latestBrief,runReceipts),box=$('freshness');box.replaceChildren();box.className='freshness '+f.kind;box.append(el('p',f.text));const sync=syncState==='ok'?'Browser synced '+savedTime(syncAt):syncState==='loading'?'Checking saved data…':syncState==='offline'?'Offline · displaying previously saved data':syncState==='pending'?'Refresh deferred until the current edit is finished':'Refresh failed · showing last loaded data. Retry Refresh.';box.append(el('p',sync,'sync-state'));const content=latestBrief?'Brief date: '+latestBrief.brief_date+(latestBrief.created_at?' · Saved '+savedTime(latestBrief.created_at):''):'No saved brief';const checks=runReceipts.slice().sort((a,b)=>Date.parse(b.checked_at)-Date.parse(a.checked_at)).map(r=>`${r.scope}: ${r.outcome} · checked ${savedTime(r.checked_at)}${r.message?'\n'+r.message:''}`).join('\n\n');box.append(detailButton('Freshness details',content+'\n\nBrowser sync only confirms access to saved records, not source research.\n\n'+(checks||'No source-check receipt recorded.')+'\n\nDaily deadline: 9:30 a.m. Arizona, allowing the morning run window and recovery grace.'));}
+function refreshSafely(){if(!state||busy)return;refreshDailyPresentation();if($('task-dialog').open||reader.open){syncState='pending';renderFreshness();return;}loadConnected();}
+function render(){if(!state)return;state.planningDate=DailySpark.dayKey();renderArt();$('eyebrow').textContent=new Date().toLocaleDateString('en-US',{timeZone:'America/Phoenix',weekday:'long',month:'long',day:'numeric'});$('section-title').textContent=names[active];$('section-description').textContent=active==='today'?'Your latest picks, commitments and optional inspiration.':intro[active];const view=$('view');view.replaceChildren();const layout=el('div','','dashboard-grid'),main=el('div','','main-column'),aside=el('aside','','side-column');let featured=[];
+ if(active==='today'||active==='career'){const n=state.notes.filter(n=>n.section==='career'&&/^Apply (first|next):/im.test(n.body)).sort((a,b)=>Date.parse(b.at)-Date.parse(a.at))[0]||newestNote('career');if(n){main.append(applicationCards(n));featured.push(n.id);}}
+ else{const n=newestNote(active);if(n){main.append(proseCard(n));featured.push(n.id);}}
+ main.append(checklistCard(active==='today'?null:active));const suggestions=suggestionPanel();if(suggestions){suggestions.classList.add('card');main.append(suggestions);}
+ if(active==='today'){const w=newestNote('writing');if(w){main.append(proseCard(w,true));featured.push(w.id);}}
+ aside.append(briefCard());const commitments=commitmentList(active==='today'?null:active);commitments.classList.add('card','context-card');aside.append(commitments,artCardLive());
+ const archive=state.notes.filter(n=>(active==='today'?n.section==='today':n.section===active)&&!featured.includes(n.id)).sort((a,b)=>Date.parse(b.at)-Date.parse(a.at));if(archive.length){const c=el('section','','card note-archive');c.append(cardHeading('Working notes',`${archive.length} saved`));for(const n of archive){const row=el('div','','note-disclosure');row.append(detailButton(noteParts(n).title,n.body),savedLabel(n));c.append(row);}main.append(c);}layout.append(main,aside);view.append(layout);$('notes-title').textContent='Leave an update';$('note').value=noteDrafts[active]||'';$('notes').replaceChildren();const history=state.history.filter(h=>active==='today'||h.section===active).slice().reverse();$('history-list').replaceChildren(...history.map(h=>el('p',`${savedTime(h.at)} · ${names[h.section]||''} · ${h.text}`)));renderFreshness();}
+
+window.addEventListener('beforeunload',e=>{if(Object.values(noteDrafts).some(Boolean)||($('task-dialog').open&&!$('task-form').hidden)){e.preventDefault();e.returnValue='';}});
+
 /* END SPORE PRESENTATION */
+let syncAt=null,syncState='loading',runReceipts=[];
 let busy=false,latestBrief=null,taskVersions=new Map(),workspaceEpoch=0,loadCounter=0;
 const client=SporeSDK.publicClient(SporeSDK.createClient,{url:'https://ujsliyqjzyofcytcemhs.supabase.co',publishableKey:'sb_publishable_aeVSmS8RJ5SotDmQdtaZig_HjzagE8X',redirectTo:SporeSDK.CALLBACK});
 const adapter=SporeSDK.createAdapter(client,{redirectTo:SporeSDK.CALLBACK,onInvalidate:lockWorkspace});
 function showSignIn(show){$('login-form').hidden=!show;$('sign-in-help').hidden=!show;}
 function authMessage(text){$('auth-message').textContent=text;}
-function lockWorkspace(){if($('set-password-form'))$('set-password-form').reset();if($('login-password'))$('login-password').value='';showSignIn(false);workspaceEpoch++;loadCounter++;state=null;latestBrief=null;taskVersions.clear();noteDrafts={};editing=null;undoAction=null;document.querySelector('.studio').hidden=true;$('auth-gate').hidden=false;$('view').replaceChildren();$('notes').replaceChildren();$('history-list').replaceChildren();$('task-detail').replaceChildren();$('task-form').reset();$('note').value='';if($('task-dialog').open)$('task-dialog').close();authMessage('Workspace locked. Sign in or check access again.');}
+function lockWorkspace(){if($('detail-reader')?.open)$('detail-reader').close();if(typeof readerBody!=='undefined')readerBody.replaceChildren();runReceipts=[];syncAt=null;$('freshness').replaceChildren();if($('set-password-form'))$('set-password-form').reset();if($('login-password'))$('login-password').value='';showSignIn(false);workspaceEpoch++;loadCounter++;state=null;latestBrief=null;taskVersions.clear();noteDrafts={};editing=null;undoAction=null;document.querySelector('.studio').hidden=true;$('auth-gate').hidden=false;$('view').replaceChildren();$('notes').replaceChildren();$('history-list').replaceChildren();$('task-detail').replaceChildren();$('task-form').reset();$('note').value='';if($('task-dialog').open)$('task-dialog').close();authMessage('Workspace locked. Sign in or check access again.');}
 function convertSnapshot(s){
  s=SporeVisibility.snapshot(s);
+ runReceipts=s.notes.map(SporeFreshness.receipt).filter(Boolean);s={...s,notes:s.notes.filter(n=>!SporeFreshness.receipt(n))};
  taskVersions=new Map(s.tasks.map(t=>[t.id,t.revision]));latestBrief=s.briefs.sort((a,b)=>b.brief_date.localeCompare(a.brief_date))[0]||null;
  fixtures.commitments=(latestBrief?.commitments||[]).filter(c=>c&&typeof c.title==='string'&&typeof c.date==='string').map(c=>[c.date,c.title,names[c.section]||'Personal',Object.hasOwn(names,c.section)?c.section:'personal']);
  return {owner:s.owner,version:2,revision:0,mode:'connected',planningDate:DailySpark.dayKey(),generatedAt:new Date().toISOString(),tasks:s.tasks.map(t=>({...t,nextAction:t.next_action,deferUntil:t.defer_until||'',due:t.due||'',opportunityRef:t.airtable_record_id})),notes:s.notes.map(n=>({...n,at:n.created_at})),history:s.history.map(h=>({...h,at:h.created_at,text:h.kind.replaceAll('_',' ')}))};
 }
-async function loadConnected(){const ticket=++loadCounter,epoch=workspaceEpoch;try{const s=await adapter.load();if(ticket!==loadCounter||epoch!==workspaceEpoch)return false;state=convertSnapshot(s);$('auth-gate').hidden=true;document.querySelector('.studio').hidden=false;select(Object.hasOwn(names,active)?active:'today');return true;}catch(e){if(ticket!==loadCounter||epoch!==workspaceEpoch)return false;lockWorkspace();showSignIn(e.code==='AUTH');authMessage(e.code==='FORBIDDEN'?'Your email is verified. Workspace access is awaiting activation; use Check access again after activation.':e.code==='AUTH'?'Sign in with your invited account.':'Could not load the workspace. Check your connection and try again.');return false;}}
+async function loadConnected(){
+ if(busy)return false;
+ const ticket=++loadCounter,epoch=workspaceEpoch;syncState='loading';if(state)renderFreshness();
+ try{const s=await adapter.load();if(ticket!==loadCounter||epoch!==workspaceEpoch)return false;
+ if(busy){syncState='pending';renderFreshness();return false;}
+ noteDrafts[active]=$('note').value;
+ state=convertSnapshot(s);syncAt=new Date().toISOString();syncState='ok';
+ $('auth-gate').hidden=true;document.querySelector('.studio').hidden=false;
+ if(!$('task-dialog').open&&!$('detail-reader')?.open)select(Object.hasOwn(names,active)?active:'today');else renderFreshness();
+ return true;
+ }catch(e){if(ticket!==loadCounter||epoch!==workspaceEpoch)return false;syncState='error';
+ if(state&&!['AUTH','FORBIDDEN','SESSION_CHANGED'].includes(e.code)){renderFreshness();return false;}
+ lockWorkspace();showSignIn(e.code==='AUTH');authMessage(e.code==='FORBIDDEN'?'Workspace access is awaiting activation.':e.code==='AUTH'?'Sign in with your invited account.':'Could not load the workspace. Check your connection and try again.');return false;}}
+
 function payload(t){return {id:t.id,section:t.section,title:t.title,why:t.why,next_action:t.nextAction,due:t.due||null,defer_until:t.deferUntil||null,priority:t.priority,minutes:t.minutes,done:t.done,airtable_record_id:t.opportunityRef||null};}
 async function saveConnected(action){
  if(!state)throw Error('Sign in before saving.');const epoch=workspaceEpoch;
@@ -21402,6 +21474,9 @@ $('retry-auth').addEventListener('click',()=>loadConnected());
 $('refresh').addEventListener('click',async()=>{if(busy){notify('Wait for the current save.');return;}await loadConnected();});
 async function signOutConnected(){lockWorkspace();try{await adapter.signOut();showSignIn(true);authMessage('Signed out.');}catch{showSignIn(true);authMessage('Locked here; server sign-out was not confirmed. Try again.');}}
 $('sign-out').addEventListener('click',signOutConnected);$('gate-sign-out').addEventListener('click',signOutConnected);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state&&!busy&&!$('task-dialog').open&&!Object.values(noteDrafts).some(Boolean))loadConnected();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state)refreshSafely();});
+window.addEventListener('online',()=>{if(state)refreshSafely();});
+window.addEventListener('offline',()=>{syncState='offline';if(state)renderFreshness();});
+setInterval(()=>{if(state&&!document.hidden)refreshSafely();},300000);
 async function startConnected(){try{await SporeSDK.finishReturn(client.auth,location.href,()=>history.replaceState(null,'',location.pathname));active=Object.hasOwn(names,location.hash.slice(1))?location.hash.slice(1):'today';await loadConnected();}catch(e){lockWorkspace();showSignIn(true);authMessage(e.message);}}
 startConnected();
