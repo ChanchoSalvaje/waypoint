@@ -1,0 +1,46 @@
+{
+  "review_date_utc": "2026-10-17",
+  "published": false,
+  "node_tests": {
+    "passed": 24,
+    "failed": 0
+  },
+  "browser": [
+    {
+      "viewport": {
+        "width": 1250,
+        "height": 938,
+        "fontSize": "16px"
+      },
+      "passed": 139,
+      "failed": 0
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "fontSize": "16px"
+      },
+      "passed": 139,
+      "failed": 0
+    },
+    {
+      "viewport": {
+        "width": 320,
+        "height": 780,
+        "fontSize": "32px"
+      },
+      "passed": 139,
+      "failed": 0
+    }
+  ],
+  "library_pdf": {
+    "name": "Spore-local-preview-2026-10-17.pdf",
+    "library_file_id": "libfile_c34786b275448191b8eeed52ebc9caea",
+    "file_id": "file_00000000f0488230aaa048dfcfbbe760"
+  },
+  "limitations": [
+    "Responsive desktop Chrome; no physical Android device test.",
+    "Seven-day artwork collection repeats weekly."
+  ]
+}

@@ -1,0 +1,768 @@
+/* ============================================================
+   WAYPOINT UI — shared design system
+   ONE system: tokens are DESIGN.md's (source of truth), reusing the same
+   names as index.html's :root so there is no second palette / no drift.
+   Component classes below are layered on top of those tokens.
+   Link from every page:  <link rel="stylesheet" href="/waypoint-ui.css">
+   ============================================================ */
+
+:root{
+  /* ---- Core palette — DESIGN.md functional mapping (names match index.html) ---- */
+  --paper:#F3EEE4;        /* page background — Warm Parchment (lightened) */
+  --surface:#FCFAF6;      /* cards / surfaces — warm white              */
+  --ink:#25283D;          /* headings + body — Midnight Indigo          */
+  --muted:#6B6459;        /* muted / secondary text                     */
+  --faint:#9A958C;        /* faint labels                               */
+  --line:#E3DCCF;         /* hairlines / borders                        */
+  --steel:#2F4A3A;        /* ground / nav / header band — Deep Mesquite  */
+  --steel-2:#6F8796;      /* secondary / info / links — Soft Steel Blue  */
+  --voltage:#B85C38;      /* accent / primary — Ember Copper            */
+  --voltage-soft:#F5E9E1; /* accent soft tint — callout / next-step bg   */
+  --live:#2F4A3A;         /* success (ground green)                     */
+  --flag:#B23B3B;         /* alert                                      */
+  --flag-soft:#F6E3DD;    /* alert soft bg                              */
+  /* stage badges (DESIGN.md) */
+  --saved:#6F8796; --tailoring:#B85C38; --ready:#A66A4C; --applied:#25283D;
+  --screening:#2F4A3A; --interviewing:#8B4F55; --offer:#C7A45A; --closed:#9A958C;
+
+  /* ---- Tokens ADDED for these components (also recorded in DESIGN.md) ---- */
+  --voltage-deep:#A2481F; /* Ember Copper, deep — small accent text (contrast) */
+  --voltage-line:#EBD6C7; /* border for accent-soft / callout surfaces         */
+  --steel-deep:#244639;   /* Deep Mesquite, deeper — button hover / active      */
+  --gold:#C7A45A;         /* Antique Gold — eyebrow on dark (same hex as --offer)*/
+  --panel:#EDE7DA;        /* subtle warm fill — chips / recessed               */
+  --on-dark:#FBF7F0;      /* light text on dark/accent surfaces (DESIGN.md)     */
+
+  /* ---- Type + shape (DESIGN.md: clean sans; see note re: serif in DESIGN.md) ---- */
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --r:14px;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;}
+h1{color:var(--ink);font-weight:700;letter-spacing:-.02em;margin:0;font-size:clamp(26px,4vw,38px);line-height:1.1;}
+h2{color:var(--ink);font-weight:700;letter-spacing:-.01em;margin:0;font-size:17px;}
+h3{color:var(--ink);font-weight:700;margin:0 0 6px;font-size:15px;}
+
+/* Shared green header (put on EVERY page) */
+.topbar{background:var(--steel);color:var(--on-dark);display:flex;align-items:center;justify-content:space-between;padding:15px 30px;}
+.topbar .brand{display:flex;align-items:center;gap:11px;}
+.topbar .star{color:var(--voltage);font-size:20px;line-height:1;}                 /* Ember Copper mark, per DESIGN.md */
+.topbar .name{font-weight:500;font-size:19px;color:var(--paper);letter-spacing:-.01em;} /* Warm Parchment wordmark on dark */
+.topbar .sub{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);} /* Antique Gold eyebrow on dark */
+.top-btn{font-size:13px;color:var(--on-dark);border:1px solid rgba(243,238,228,.34);border-radius:999px;padding:7px 16px;background:transparent;font-weight:500;cursor:pointer;}
+.top-btn:hover{background:rgba(243,238,228,.12);}
+.page{padding:34px 40px 44px;max-width:1040px;margin:0 auto;}
+.back{font-size:13.5px;color:var(--voltage-deep);font-weight:600;margin-bottom:18px;display:inline-block;}
+.accent-underline{width:54px;height:3px;background:var(--voltage);border-radius:2px;margin:16px 0 4px;}
+
+/* Eyebrow / section label */
+.eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--voltage-deep);margin:30px 0 12px;display:flex;align-items:center;gap:8px;}
+.eyebrow::before{content:"\25C6";color:var(--voltage);font-size:10px;}
+
+/* Cards, KPI tiles, list rows (flat + hairline, matching the app) */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;}
+.grid{display:grid;gap:16px;}
+.grid-4{grid-template-columns:repeat(4,1fr);}
+.kpi .lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;}
+.kpi .num{font-size:32px;font-weight:700;color:var(--ink);margin-top:8px;line-height:1;}
+.listcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;}
+.row{display:flex;align-items:center;gap:15px;padding:16px 20px;border-top:1px solid var(--line);}
+.row:first-child{border-top:none;}
+.av{width:34px;height:34px;border-radius:50%;flex:none;color:var(--on-dark);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;background:var(--voltage);}
+
+/* Status pills */
+.pill-s{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 11px;border-radius:999px;white-space:nowrap;display:inline-block;}
+.s-green{background:var(--steel);color:var(--on-dark);}
+.s-terra{background:var(--voltage);color:var(--on-dark);}
+.s-slate{background:var(--panel);color:var(--muted);}
+/* Stage badges — all 8 DESIGN.md stage colors. Light text except Offer & Closed (dark, for legibility). */
+.pill-s.st-saved{background:var(--saved);color:var(--on-dark);}
+.pill-s.st-tailoring{background:var(--tailoring);color:var(--on-dark);}
+.pill-s.st-ready{background:var(--ready);color:var(--on-dark);}
+.pill-s.st-applied{background:var(--applied);color:var(--on-dark);}
+.pill-s.st-screening{background:var(--screening);color:var(--on-dark);}
+.pill-s.st-interviewing{background:var(--interviewing);color:var(--on-dark);}
+.pill-s.st-offer{background:var(--offer);color:var(--ink);}
+.pill-s.st-closed{background:var(--closed);color:var(--ink);}
+
+/* Fact chips */
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.fact{font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 13px;}
+.fact b{color:var(--ink);font-weight:700;}
+
+/* Callout (accent-soft) */
+.callout{background:var(--voltage-soft);border:1px solid var(--voltage-line);border-radius:var(--r);padding:18px 22px;margin-top:20px;position:relative;}
+.callout__label{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--voltage-deep);margin:0 0 7px;}
+.callout p{margin:0;color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.55;}
+
+/* Section header (dossier) */
+.section-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.marker{width:12px;height:12px;background:var(--voltage);border-radius:2px;flex:none;}
+
+/* Definition list (labeled fact blocks) */
+.deflist{border-left:3px solid var(--voltage);padding-left:22px;}
+.deflist__item{padding:14px 0;border-top:1px solid var(--line);}
+.deflist__item:first-child{padding-top:0;border-top:none;}
+.deflist__label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);display:block;margin-bottom:5px;}
+.deflist__label--flag{color:var(--voltage-deep);}
+.deflist__item p{margin:0;font-family:var(--sans);font-size:15.5px;line-height:1.6;color:var(--ink);}
+.flag-note{background:var(--voltage-soft);border:1px solid var(--voltage-line);border-radius:6px;padding:11px 14px;margin-top:8px;font-family:var(--sans);font-size:15px;color:var(--ink);}
+
+/* Lists */
+.prose{font-family:var(--sans);font-size:16px;line-height:1.7;color:var(--ink);margin:0;}
+ul.list-dot{list-style:none;margin:0;padding:0;}
+ul.list-dot li{font-family:var(--sans);font-size:15.5px;line-height:1.5;padding:3px 0 3px 16px;position:relative;color:var(--ink);}
+ul.list-dot li::before{content:"";position:absolute;left:0;top:12px;width:5px;height:5px;border-radius:50%;background:var(--voltage);}
+ul.list-dot b{color:var(--ink);font-weight:600;}
+ul.list-diamond{list-style:none;margin:0;padding:0;}
+ul.list-diamond li{position:relative;padding:0 0 0 26px;margin-bottom:13px;font-family:var(--sans);font-size:16px;line-height:1.55;color:var(--ink);}
+ul.list-diamond li::before{content:"";position:absolute;left:2px;top:9px;width:8px;height:8px;background:var(--voltage);border-radius:2px;transform:rotate(45deg);}
+ul.list-diamond b{color:var(--ink);font-weight:600;}
+
+/* Buttons + form inputs */
+.btn-green{background:var(--steel);color:var(--on-dark);border:none;border-radius:9px;padding:11px 18px;font-weight:600;font-size:14px;cursor:pointer;}
+.btn-green:hover{background:var(--steel-deep);}
+.btn-ghost{font-size:12.5px;color:var(--voltage-deep);border:1px solid var(--voltage-line);background:var(--voltage-soft);border-radius:8px;padding:7px 13px;font-weight:600;display:inline-block;cursor:pointer;}
+input,select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 13px;color:var(--ink);font-size:14px;font-family:var(--sans);}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--voltage);outline-offset:0;border-color:var(--voltage);}
+
+/* Footer + responsive + print */
+.foot{text-align:center;color:var(--muted);font-size:12.5px;padding:18px 0;}
+@media (max-width:720px){.grid-4{grid-template-columns:1fr 1fr;}}
+@media (max-width:560px){.page{padding:24px 20px;}.grid-4{grid-template-columns:1fr;}h1{font-size:25px;}}
+@media print{body{background:#fff;}.topbar{-webkit-print-color-adjust:exact;print-color-adjust:exact;}.card,.callout,.listcard,.deflist{break-inside:avoid;}}
+
+/* ============================================================
+   WAYPOINT APP COMPONENTS — view-specific styles for the pipeline
+   SPA (dashboard / job detail / comp). Layered on the tokens above;
+   the design-system primitives (card, kpi, pill-s, facts, callout,
+   deflist, lists, buttons, inputs) come from the section above.
+   ============================================================ */
+.hidden{display:none!important}
+body{background:radial-gradient(1200px 500px at 80% -10%, rgba(47,74,58,.06), transparent 60%), var(--paper);}
+:focus-visible{outline:2px solid var(--voltage);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* compass-star mark inside the green topbar (DESIGN.md logo) */
+.topbar .brand-mark{flex:0 0 auto;display:block}
+
+/* greeting sub + dividers + shared small text */
+.sub{color:var(--muted);font-size:15px}
+.sub b{color:var(--ink)}
+.rule{height:2px;background:linear-gradient(90deg,var(--voltage) 0 64px,var(--line) 64px);margin:22px 0 26px;border-radius:2px}
+.empty{color:var(--faint);font-size:14px;font-style:italic;padding:6px 0}
+.readonly-note{font-family:ui-monospace,monospace;font-size:11px;color:var(--faint);margin-top:8px}
+p.body{color:var(--ink);font-size:15px;margin:0 0 12px;white-space:pre-wrap}
+
+/* toolbar (section label + closed toggle) */
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin:26px 0 10px;gap:12px;flex-wrap:wrap}
+.toolbar .eyebrow{margin:0}
+.toggle{font-size:13px;color:var(--steel-2);cursor:pointer;font-weight:600;background:none;border:1px solid var(--line);border-radius:9px;padding:7px 12px}
+.toggle.on{background:var(--steel);color:var(--on-dark);border-color:var(--steel)}
+
+/* Today list + Opportunities list rows */
+.today{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:8px}
+.na{display:flex;gap:14px;align-items:center;padding:14px 16px;border-radius:11px;cursor:pointer;transition:background .12s;border-bottom:1px solid var(--line)}
+.na:last-child{border-bottom:none}
+.na:hover{background:var(--panel)}
+.na .body{flex:1;min-width:0}
+.na .act{font-size:13.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chev{color:var(--faint);flex:0 0 auto}
+.listcard .row{cursor:pointer;transition:background .12s}
+.listcard .row:hover{background:var(--panel)}
+.row-main{flex:1;min-width:0}
+.co{font-weight:650;font-size:15px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.na .co{font-size:14.5px}
+.role{font-size:13px;color:var(--muted);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.meta{font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:2px;flex:0 1 auto;min-width:0}
+.meta span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:28ch}
+.right{display:flex;align-items:center;gap:12px;flex:0 0 auto;min-width:0;margin-left:auto}
+.fit{font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--steel-2);white-space:nowrap}
+.fit .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--voltage);margin-right:3px}
+
+/* monogram avatar (per-company tint set inline in JS) */
+.mono-badge{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;color:var(--paper);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;font-size:14px;line-height:1;user-select:none}
+
+/* external-link icon + copper "Open application" button */
+.ext-link{display:inline-flex;align-items:center;justify-content:center;color:var(--voltage);flex:0 0 auto;padding:3px;border-radius:6px;text-decoration:none}
+.ext-link:hover{background:var(--voltage-soft)}
+.ext-ico{display:block}
+.posting-btn{display:inline-flex;align-items:center;gap:6px;background:var(--voltage);color:var(--on-dark);font-weight:650;font-size:14px;text-decoration:none;padding:10px 16px;border-radius:10px}
+.posting-btn:hover{background:var(--voltage-deep)}
+
+/* detail header */
+.detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:8px}
+.detail-head-text{min-width:0}
+.detail-head .posting-btn{margin-top:6px;flex:0 0 auto}
+
+/* at-a-glance: facts carry inline controls */
+.facts .fact{display:inline-flex;align-items:center;gap:6px;max-width:100%;min-width:0;overflow-wrap:anywhere}
+.fval{display:inline-block;max-width:28ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.detail-head h1,.detail-head .sub{overflow-wrap:anywhere}
+.fact .pips{margin-left:2px}
+
+/* help "?" tooltip */
+.help{position:relative;display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--steel-2);color:var(--steel-2);font-size:10px;font-weight:700;cursor:help;background:none;margin-left:5px;line-height:1;padding:0;font-family:ui-monospace,monospace}
+.help .help-pop{display:none;position:absolute;left:-6px;top:150%;z-index:30;width:250px;background:var(--ink);color:var(--paper);font-family:var(--sans);font-weight:400;font-size:12px;line-height:1.5;letter-spacing:0;text-transform:none;padding:10px 12px;border-radius:9px;box-shadow:0 8px 24px rgba(37,40,61,.28)}
+.help:hover .help-pop,.help:focus .help-pop{display:block}
+.help-pop b{color:var(--surface);font-weight:600}
+
+/* excitement pips */
+.pips{display:inline-flex;gap:4px;vertical-align:middle}
+.pip{font:inherit;font-size:12px;font-weight:700;width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer;line-height:1;padding:0}
+.pip.on{background:var(--voltage);border-color:var(--voltage);color:var(--on-dark)}
+.pip:hover{border-color:var(--voltage)}
+.pip:disabled{opacity:.5;cursor:default}
+
+/* recommended next step (built on .callout) */
+.callout-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:7px}
+.callout .ns-default{color:var(--muted);font-style:italic}
+.callout .ns-tag{display:block;margin-top:6px;font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.06em;color:var(--faint);font-style:normal}
+#nextstep-edit textarea{width:100%;margin:6px 0 12px;min-height:52px;line-height:1.4;resize:vertical}
+.link-btn{background:none;border:none;color:var(--steel-2);font:inherit;font-weight:600;font-size:13px;cursor:pointer;padding:2px 4px}
+.link-btn:hover{color:var(--voltage);text-decoration:underline}
+
+/* prep dossier (collapsible <details>) */
+.prep-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:18px}
+.prep-row{border-bottom:1px solid var(--line)}
+.prep-row:last-child{border-bottom:none}
+.prep-row summary{cursor:pointer;padding:14px 18px;font-weight:650;font-size:15px;color:var(--ink);display:flex;align-items:center;gap:10px;list-style:none}
+.prep-row summary::-webkit-details-marker{display:none}
+.prep-row summary:hover{background:var(--panel)}
+.prep-row summary .t{flex:1;min-width:0}
+.prep-row summary::after{content:"\25B8";color:var(--faint);font-size:12px}
+.prep-row[open] summary::after{content:"\25BE"}
+.prep-hint{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:600}
+.prep-content{padding:2px 18px 18px}
+.prep-content .deflist,.prep-content .prose,.prep-content ul,.prep-content .facts{margin-top:6px}
+
+/* edit form helpers (Status & activity, next-step) */
+.fld{display:block;font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:0 0 6px}
+.edit-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.edit-divider{height:1px;background:var(--line);margin:20px 0}
+.edit-status{font-size:13px;color:var(--muted)}
+.edit-status.ok{color:var(--live);font-weight:600}
+.edit-status.err{color:var(--flag);font-weight:600}
+.card select,.card textarea{width:100%;margin-bottom:14px}
+.card textarea{min-height:52px;line-height:1.4;resize:vertical}
+
+/* comp view */
+.comp-grid{display:grid;grid-template-columns:1fr auto;gap:10px 16px;align-items:center;max-width:460px;margin-bottom:4px}
+.comp-grid label{font-size:14px;color:var(--ink)}
+.comp-grid input{width:150px;text-align:right}
+.comp-result{display:flex;flex-wrap:wrap;gap:14px;margin:18px 0 12px}
+.comp-figure{flex:1 1 180px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:15px 16px}
+.comp-figure .k{font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+.comp-figure .v{font-size:26px;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
+.comp-banner{background:var(--voltage-soft);border:1px solid var(--voltage-line);border-radius:12px;padding:14px 16px;font-size:14.5px;color:var(--ink)}
+.comp-banner .lead{font-weight:650}
+.comp-note{font-size:13px;color:var(--muted)}
+.comp-sub{font-size:13px;color:var(--muted);margin-top:8px}
+.comp-rate{background:#EAF0EC;border:1px solid #D3E0D6;border-radius:12px;padding:16px 18px;margin-top:16px;color:var(--steel)}
+.comp-rate .k{font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#4B5F52;margin-bottom:6px}
+.comp-rate .v{font-size:30px;font-weight:700;letter-spacing:-.01em}
+.comp-rate .naive{font-size:13.5px;color:#4B5F52;margin-top:8px}
+.comp-caveat{font-size:12px;color:var(--faint);font-style:italic;margin-top:6px}
+
+/* Pursue toggle (dashboard row + Status & activity card) */
+.pursue{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;user-select:none;white-space:nowrap}
+.pursue input{width:15px;height:15px;margin:0;accent-color:var(--voltage);cursor:pointer;flex:0 0 auto}
+.pursue.on{color:var(--voltage-deep)}
+.pursue-hint{font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.04em;color:var(--voltage-deep);background:var(--voltage-soft);border:1px solid var(--voltage-line);border-radius:999px;padding:3px 9px;white-space:nowrap}
+
+/* footer + mobile */
+footer{margin-top:28px;text-align:center;color:var(--faint);font-size:12px}
+@media (max-width:640px){.meta{display:none}}
+
+/* ============================================================
+   SLICE 4 — Settings tab + Close action
+   ============================================================ */
+.top-actions{display:flex;gap:10px;align-items:center}
+
+/* Confirm modal (Close reason / Reopen) */
+.modal-overlay{position:fixed;inset:0;background:rgba(37,40,61,.45);z-index:60}
+.modal-card{position:fixed;z-index:61;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,92vw);background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 18px 50px rgba(37,40,61,.3);padding:22px 24px}
+.modal-card h3{margin:0 0 2px;font-size:18px}
+.modal-sub{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+.reason-label{font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
+.reason-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.reason-chip{font:inherit;font-size:13px;font-weight:600;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 14px;cursor:pointer}
+.reason-chip:hover{border-color:var(--voltage)}
+.reason-chip.on{background:var(--voltage);color:var(--on-dark);border-color:var(--voltage)}
+.reason-text{width:100%;margin-bottom:14px}
+.modal-actions{display:flex;align-items:center;gap:14px}
+.btn-close-confirm{font:inherit;font-size:14px;font-weight:650;color:var(--on-dark);background:var(--voltage);border:1px solid var(--voltage);border-radius:10px;padding:9px 18px;cursor:pointer}
+.btn-close-confirm:hover{background:var(--voltage-deep)}
+.btn-close-confirm:disabled{opacity:.5;cursor:default}
+
+/* Settings form */
+.settings-section{margin-bottom:28px}
+.settings-section .eyebrow{margin:0 0 12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);flex-wrap:wrap}
+.seg button{font:inherit;font-size:13.5px;font-weight:600;color:var(--muted);background:none;border:none;padding:9px 16px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:none}
+.seg button.on{background:var(--steel);color:var(--on-dark)}
+.preset-note{font-size:12.5px;color:var(--muted);margin-top:8px;max-width:620px}
+.comp-dial{display:grid;grid-template-columns:132px 1fr 104px;align-items:center;gap:14px;margin-bottom:14px;max-width:580px}
+.comp-dial>label{font-size:14px;color:var(--ink)}
+.comp-dial input[type=range]{width:100%;accent-color:var(--voltage)}
+.comp-dial input[type=number]{text-align:right}
+.lane{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:var(--surface)}
+.lane-head{display:flex;align-items:center;gap:12px}
+.lane-name{font-weight:650;font-size:15px;color:var(--ink);flex:1}
+.switch{position:relative;display:inline-block;width:40px;height:22px;flex:0 0 auto;cursor:pointer}
+.switch input{opacity:0;width:0;height:0;position:absolute}
+.switch-track{position:absolute;inset:0;background:var(--line);border-radius:999px;transition:background .15s}
+.switch-track::before{content:"";position:absolute;left:2px;top:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform .15s}
+.switch input:checked+.switch-track{background:var(--voltage)}
+.switch input:checked+.switch-track::before{transform:translateX(18px)}
+.lane-reminder{font-size:12.5px;color:var(--voltage-deep);background:var(--voltage-soft);border:1px solid var(--voltage-line);border-radius:8px;padding:8px 11px;margin-top:10px}
+.lane-vocab{margin-top:10px}
+.lane-vocab textarea{width:100%;min-height:70px;line-height:1.4;resize:vertical}
+.filter-row{display:grid;grid-template-columns:132px 1fr;align-items:center;gap:14px;margin-bottom:12px;max-width:580px}
+.filter-row>label{font-size:14px;color:var(--ink)}
+.filter-row input,.filter-row select{width:100%}
+.nudge{border-radius:10px;padding:11px 14px;margin-bottom:10px;font-size:13.5px;border:1px solid}
+.nudge--warn{background:var(--voltage-soft);border-color:var(--voltage-line);color:var(--ink)}
+.nudge--alert{background:var(--flag-soft);border-color:#E9C9C2;color:var(--ink)}
+.settings-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:8px}
+.settings-changelog{font-family:ui-monospace,monospace;font-size:11.5px;color:var(--muted);white-space:pre-wrap;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:14px;max-height:150px;overflow:auto}
+
+/* ============================================================
+   SIGNALS FEED — single-column full-width card feed (Opportunities pattern).
+   Grouped New → Reviewing → Pitched; Dismissed behind a toggle.
+   ============================================================ */
+.sig-group-label{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--voltage-deep);margin:24px 0 10px;display:flex;align-items:center;gap:8px}
+.sig-group-label:first-child{margin-top:4px}
+.sig-group-label span{font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);background:var(--panel);border-radius:999px;padding:1px 8px;letter-spacing:0}
+.sig-feed{display:flex;flex-direction:column;gap:12px}
+
+.sig-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
+.sig-card--stale{border-color:var(--voltage-line);box-shadow:inset 3px 0 0 var(--voltage)}
+.sig-card-top{display:flex;align-items:center;gap:9px;margin-bottom:9px;flex-wrap:wrap}
+.sig-status{flex:0 0 auto}
+.sig-st-new{background:var(--gold);color:var(--ink)}
+.sig-st-reviewing{background:var(--steel-2);color:var(--on-dark)}
+.sig-st-pitched{background:var(--live);color:var(--on-dark)}
+.sig-st-dismissed{background:var(--closed);color:var(--ink)}
+.sig-date{font-family:ui-monospace,monospace;font-size:11px;color:var(--faint);white-space:nowrap;margin-left:auto}
+.sig-type{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 9px;border-radius:999px;color:var(--on-dark);line-height:1.35}
+.sig-exec{background:var(--interviewing)}          /* Muted Rosewood — exec hire */
+.sig-coe{background:var(--steel-2)}                /* Soft Steel Blue — CoE launch */
+.sig-commit{background:var(--steel)}               /* Mesquite Green — public commitment */
+.sig-restructure{background:var(--ready)}          /* Sonoran Clay — restructure + hiring */
+.sig-other{background:var(--panel);color:var(--muted)}
+.sig-title{font-weight:700;font-size:16px;line-height:1.3;color:var(--ink);letter-spacing:-.01em;overflow-wrap:anywhere}
+.sig-co{font-size:13px;color:var(--muted);margin-top:3px;font-weight:600}
+.sig-why{font-size:12.5px;color:var(--muted);margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sig-tier{font-weight:700;color:var(--steel-2)}
+.sig-flags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.sig-chip{font-size:11px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;border:1px solid}
+.sig-chip--later{color:var(--steel-2);background:var(--panel);border-color:var(--line)}
+.sig-chip--soon{color:var(--voltage-deep);background:var(--voltage-soft);border-color:var(--voltage-line)}
+.sig-chip--past{color:var(--flag);background:var(--flag-soft);border-color:#E9C9C2}
+.sig-stale{font-size:11px;font-weight:600;color:var(--flag);background:var(--flag-soft);border:1px solid #E9C9C2;border-radius:999px;padding:2px 9px}
+.sig-who{font-size:13.5px;color:var(--ink);line-height:1.5;margin-top:11px}
+.sig-note{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:11px;padding-top:10px;border-top:1px solid var(--line);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.sig-note-lbl{font-family:ui-monospace,monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-right:5px}
+
+/* expandable details (Summary / Angle / Notes) */
+.sig-more{margin-top:11px}
+.sig-more>summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--steel-2);list-style:none;padding:3px 0}
+.sig-more>summary::-webkit-details-marker{display:none}
+.sig-more>summary::before{content:"\25B8";font-size:10px;margin-right:5px;color:var(--faint)}
+.sig-more[open]>summary::before{content:"\25BE"}
+.sig-more>summary:hover{color:var(--voltage)}
+.sig-more-body{padding:8px 0 2px}
+.sig-sec{margin-bottom:12px}
+.sig-sec-lbl{display:block;font-family:ui-monospace,monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--voltage-deep);font-weight:700;margin-bottom:4px}
+.sig-sec p{margin:0;font-size:13.5px;line-height:1.55;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
+.sig-src{margin-top:4px;font-size:13px;padding:8px 14px}
+
+/* Staged Outreach (collapsible + copy + Mark sent) */
+.sig-staged{margin-top:11px;border:1px solid var(--voltage-line);border-radius:10px;background:var(--voltage-soft);overflow:hidden}
+.sig-staged>summary{cursor:pointer;list-style:none;padding:9px 13px;font-size:12.5px;font-weight:700;letter-spacing:.02em;color:var(--voltage-deep)}
+.sig-staged>summary::-webkit-details-marker{display:none}
+.sig-staged>summary::before{content:"\2709";margin-right:7px}
+.sig-staged-body{padding:0 13px 13px}
+.sig-staged-actions{display:flex;gap:8px;margin-bottom:9px}
+.sig-copy,.sig-marksent{font:inherit;font-size:12px;font-weight:600;border-radius:8px;padding:6px 13px;cursor:pointer;border:1px solid}
+.sig-copy{color:var(--ink);background:var(--surface);border-color:var(--line)}
+.sig-copy:hover{border-color:var(--voltage)}
+.sig-marksent{color:var(--on-dark);background:var(--steel);border-color:var(--steel)}
+.sig-marksent:hover{background:var(--steel-deep)}
+.sig-copy:disabled,.sig-marksent:disabled{opacity:.55;cursor:default}
+.sig-staged-text{background:var(--surface);border:1px solid var(--voltage-line);border-radius:8px;padding:11px 13px}
+.sig-staged-text .md-p,.sig-staged-text .md-ul li{font-size:13.5px}
+
+/* Per-card Add note */
+.sig-addnote{display:flex;gap:8px;margin-top:12px}
+.sig-note-input{flex:1;min-width:0;font-size:13px;padding:8px 12px}
+.sig-note-btn{font:inherit;font-size:12.5px;font-weight:600;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 14px;cursor:pointer;white-space:nowrap;flex:0 0 auto}
+.sig-note-btn:hover{border-color:var(--voltage);color:var(--voltage-deep)}
+.sig-note-btn:disabled{opacity:.55;cursor:default}
+
+/* status-change buttons */
+.sig-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.sig-act{font:inherit;font-size:12px;font-weight:600;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 13px;cursor:pointer;white-space:nowrap}
+.sig-act:hover{border-color:var(--voltage);color:var(--voltage-deep)}
+.sig-act--dismiss{color:var(--muted)}
+.sig-act--dismiss:hover{border-color:var(--flag);color:var(--flag)}
+
+/* Dismissed toggle */
+.sig-dismissed-wrap{margin-top:26px}
+.sig-dismissed-toggle{font:inherit;font-size:13px;font-weight:600;color:var(--steel-2);background:none;border:1px solid var(--line);border-radius:9px;padding:8px 14px;cursor:pointer}
+.sig-dismissed-toggle:hover{border-color:var(--steel-2)}
+.sig-feed--dismissed{margin-top:12px}
+.sig-feed--dismissed .sig-card{opacity:.72}
+
+/* Toast for writes */
+.sig-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:70;background:var(--ink);color:var(--on-dark);font-size:13.5px;font-weight:600;padding:11px 18px;border-radius:10px;box-shadow:0 10px 30px rgba(37,40,61,.3);max-width:90vw}
+.sig-toast.ok{background:var(--live)}
+.sig-toast.err{background:var(--flag)}
+
+@media (max-width:560px){.sig-addnote{flex-wrap:wrap}.sig-note-input{flex:1 1 100%}}
+
+/* ============================================================
+   BACKDOOR HEALTH STRIP (Waypoint UI addendum, component B)
+   Thin "is the machine alive?" strip on the dashboard.
+   ============================================================ */
+.health-strip{display:flex;flex-wrap:wrap;margin:0 0 22px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:6px 8px}
+.health-cell{display:flex;align-items:center;gap:10px;flex:1 1 190px;min-width:150px;padding:9px 14px}
+.health-cell + .health-cell{border-left:1px solid var(--line)}
+.health-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:var(--faint)}
+.hd-green{background:var(--live)}
+.hd-amber{background:var(--offer)}
+.hd-red{background:var(--flag)}
+.health-txt{min-width:0}
+.health-lbl{font-family:ui-monospace,monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:3px}
+.health-val{font-size:15px;font-weight:700;color:var(--ink);line-height:1.05}
+.health-sub{font-size:11.5px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.health-sub.warn{color:var(--voltage-deep);font-weight:600}
+.health-cell--off{opacity:.45}
+.health-cell--off .health-val{font-weight:600;color:var(--muted)}
+.health-cell--link{cursor:pointer;border-radius:10px;transition:background .12s}
+.health-cell--link:hover{background:var(--panel)}
+@media (max-width:620px){.health-cell{flex:1 1 45%}.health-cell + .health-cell{border-left:none}}
+
+/* Disabled state for Signals status buttons (prevents duplicate writes) */
+.sig-act:disabled{opacity:.55;cursor:default}
+.sig-act:disabled:hover,.sig-act--dismiss:disabled:hover{border-color:var(--line);color:var(--muted)}
+
+/* ============================================================
+   TINY MARKDOWN OUTPUT — shared by dossier fields, opportunity Notes,
+   and Signals card sections (mdToHtml / mdInline in index.html).
+   ============================================================ */
+.md-h{font-weight:700;font-size:13px;color:var(--ink);letter-spacing:.01em;margin:14px 0 5px;line-height:1.3}
+.md-h:first-child{margin-top:0}
+.md-h--flag{color:var(--voltage-deep)}
+.md-h-qual{font-weight:600;color:var(--muted);text-transform:none}
+.md-p{margin:0 0 9px;line-height:1.55;color:var(--ink);font-size:14px}
+.md-p:last-child{margin-bottom:0}
+.md-ul{list-style:none;margin:5px 0 11px;padding:0}
+.md-ul:last-child{margin-bottom:0}
+.md-ul li{position:relative;padding:2px 0 2px 17px;line-height:1.5;color:var(--ink);font-size:14px}
+.md-ul li::before{content:"";position:absolute;left:3px;top:11px;width:5px;height:5px;border-radius:50%;background:var(--voltage)}
+.md-h strong,.md-p strong,.md-ul strong{font-weight:700;color:var(--ink)}
+/* context sizing: comfortable in the dossier, compact in a Signals card */
+.prep-content .md-p,.prep-content .md-ul li{font-size:15.5px;line-height:1.6}
+.prep-content .md-h{font-size:13px}
+.md-body .md-p,.md-body .md-ul li{font-size:15px}
+.sig-more-body .md-p,.sig-more-body .md-ul li{font-size:13px;line-height:1.5}
+.sig-more-body .md-h{font-size:12px;margin-top:11px}
+
+/* ============================================================
+   TODAY — daily triage cards (#view-today). One card per Saved
+   role, two decisions: Pursue (Ember Copper, the accent action)
+   or Close (muted — deliberate, never punitive).
+   ============================================================ */
+.tj-card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:16px 18px;margin-bottom:14px;
+  transition:opacity .35s ease,transform .35s ease,border-color .15s ease;
+}
+.tj-card:last-child{margin-bottom:0}
+.tj-card:hover{border-color:var(--voltage-line)}
+
+/* mid-write: dim and lock out a second click */
+.tj-busy{opacity:.6;pointer-events:none}
+/* decided: fade out of the queue */
+.tj-done{opacity:0;transform:translateY(-6px);pointer-events:none}
+
+.tj-head{display:flex;align-items:flex-start;gap:12px}
+.tj-title{flex:1;min-width:0}
+.tj-co{font-weight:700;font-size:15px;color:var(--ink);line-height:1.3}
+.tj-role{font-size:14px;color:var(--muted);line-height:1.4;margin-top:2px}
+
+/* "New today" — the one thing worth interrupting the scan for */
+.tj-new{
+  display:inline-block;vertical-align:2px;margin-left:7px;
+  background:var(--voltage);color:var(--on-dark);
+  font-size:10.5px;font-weight:600;letter-spacing:.04em;
+  padding:2px 7px;border-radius:999px;white-space:nowrap;
+}
+
+/* Fit score badge — mirrors the .fit pill on the dashboard rows */
+.tj-fit{
+  display:inline-flex;align-items:center;gap:6px;flex:none;
+  background:var(--panel);border:1px solid var(--line);border-radius:999px;
+  padding:4px 10px;font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap;
+}
+.tj-fit .dot{width:7px;height:7px;border-radius:50%;background:var(--voltage);flex:none}
+
+.tj-chips{display:flex;flex-wrap:wrap;gap:6px;margin:11px 0 0}
+.tj-chip{
+  background:var(--panel);color:var(--muted);border-radius:6px;
+  padding:3px 9px;font-size:12px;line-height:1.5;
+}
+.tj-chip--comp{color:var(--ink);font-weight:500}
+
+/* Fit Read — the rationale, rendered through the shared tiny-markdown */
+.tj-read{
+  margin-top:12px;padding-top:12px;border-top:1px solid var(--line);
+}
+.tj-read .md-p,.tj-read .md-ul li{font-size:13.5px;line-height:1.55;color:var(--muted)}
+.tj-read .md-h{font-size:12px;margin-top:10px}
+/* multi-paragraph reads keep the markdown path; the opening paragraph is the verdict */
+.tj-read > .md-p:first-child{color:var(--ink)}
+
+/* Single-paragraph reads (public/fit-read.js): verdict first, then one line
+   per caveat. Marker SHAPE carries the meaning, colour only reinforces it:
+   ring = something to confirm, filled dot = a note, red dot = a flag. */
+.fr-lead{margin:0;font-size:14px;line-height:1.5;color:var(--ink)}
+.fr-list{list-style:none;margin:8px 0 0;padding:0}
+.fr-item{
+  position:relative;padding-left:17px;margin-top:5px;
+  font-size:13px;line-height:1.5;color:var(--muted);
+}
+.fr-item::first-letter{text-transform:uppercase}  /* display only; stored text untouched */
+.fr-item::before{
+  content:"";position:absolute;left:3px;top:.6em;
+  width:5px;height:5px;border-radius:50%;background:var(--faint);
+}
+.fr-item--check::before{
+  left:2px;top:.52em;width:5px;height:5px;
+  background:transparent;border:1.5px solid var(--steel-2);
+}
+.fr-item--flag::before{background:var(--flag)}
+.fr-flag{font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--flag)}
+
+.tj-foot{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  margin-top:14px;flex-wrap:wrap;
+}
+/* the posting link stays quiet — available, never competing with the buttons */
+.tj-link{
+  display:inline-flex;align-items:center;gap:5px;
+  color:var(--steel-2);font-size:12.5px;text-decoration:none;
+}
+.tj-link:hover{color:var(--ink);text-decoration:underline}
+.tj-link .ext-ico{width:13px;height:13px}
+
+.tj-actions{display:flex;align-items:center;gap:9px;margin-left:auto}
+.tj-actions .edit-status{font-size:12px}
+
+.tj-btn{
+  font:inherit;font-size:13px;font-weight:500;
+  padding:8px 18px;border-radius:9px;cursor:pointer;
+  border:1px solid transparent;transition:background .15s ease,border-color .15s ease,color .15s ease;
+}
+/* Pursue — the primary action, Ember Copper per DESIGN.md */
+.tj-btn--pursue{background:var(--voltage);color:var(--on-dark)}
+.tj-btn--pursue:hover{background:var(--voltage-deep)}
+/* Close — muted; a real option, just not the loud one */
+.tj-btn--close{background:var(--panel);color:var(--muted);border-color:var(--line)}
+.tj-btn--close:hover{background:var(--line);color:var(--ink)}
+.tj-btn:focus-visible{outline:2px solid var(--voltage);outline-offset:2px}
+
+/* logged date — quiet metadata, never competing with the decision buttons */
+.tj-logged{
+  margin-top:10px;font-size:11.5px;color:var(--faint);
+}
+
+@media (max-width:560px){
+  .tj-foot{align-items:flex-start}
+  .tj-actions{width:100%;margin-left:0;justify-content:flex-end}
+  .tj-btn{flex:1;text-align:center}
+}
+
+/* ============================================================
+   OPPORTUNITY ROW — EXPAND IN PLACE (the decision brief)
+   A row is a summary; the panel beneath it is the evidence. Built so a
+   decision can be made without navigating away or losing queue position.
+   Tokens only — no new hex; everything below resolves to DESIGN.md.
+   ============================================================ */
+
+/* Each row now sits in a group wrapper so its panel can live directly under it.
+   The divider moves to the group: the older `.row:first-child` rule would
+   otherwise strip the top hairline from EVERY row, since each is now first in
+   its own wrapper. */
+.listcard .opp-group>.row{border-top:1px solid var(--line)}
+.listcard .opp-group:first-child>.row{border-top:none}
+.listcard .row:focus-visible{outline:2px solid var(--voltage);outline-offset:-2px}
+
+/* The expanded row: a quiet copper rail and a warm fill — "you are here",
+   not a spotlight. */
+.opp-group.is-expanded{background:var(--surface);box-shadow:inset 3px 0 0 var(--voltage)}
+.opp-group.is-expanded>.row{background:var(--panel)}
+
+/* Caret: points down at rest, up when open. */
+.opp-caret{display:inline-block;flex:0 0 auto;color:var(--faint);font-size:19px;line-height:1;
+  transform:rotate(90deg);transition:transform .22s ease}
+.opp-group.is-expanded>.row .opp-caret{transform:rotate(-90deg);color:var(--voltage)}
+
+/* Comp provenance (RULE 2) — a guessed number must never look like a posted one.
+   Posted reads in normal ink; estimated is muted throughout. */
+.comp{white-space:nowrap}
+.comp-mark{margin-right:4px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.comp--posted{color:var(--ink);font-weight:500}
+.comp--est{color:var(--muted);font-weight:400}
+.meta .meta-comp{color:var(--muted)}
+/* `.meta span{display:block}` above would otherwise turn the provenance mark into
+   its own line, splitting "✓" off the number it qualifies. Keep them inline. */
+.meta .meta-comp .comp,.meta .meta-comp .comp-mark{display:inline;white-space:nowrap}
+
+/* ---- the panel itself ----
+   0fr → 1fr on a grid row animates to the content's natural height without
+   guessing a max-height. Quiet: .22s ease, no bounce, no overshoot. */
+.opp-panel{display:grid;grid-template-rows:0fr;opacity:0;
+  transition:grid-template-rows .22s ease,opacity .22s ease}
+.opp-panel.is-open{grid-template-rows:1fr;opacity:1}
+.opp-panel-in{overflow:hidden;min-height:0}
+.opp-panel.is-open>.opp-panel-in{padding:2px 20px 18px 22px}
+@media (prefers-reduced-motion:reduce){.opp-panel{transition:none}}
+
+/* section headings — the app's small letter-spaced instrument label */
+.opp-sec{margin-top:16px}
+.opp-sec-h{font-size:11px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--steel-2);margin:0 0 7px;display:flex;align-items:center;gap:10px}
+
+/* RULE 3 — the fit badge lives in the Fit read heading, so the score and the
+   narrative behind it can never be seen apart. */
+.opp-fit{display:inline-flex;align-items:center;gap:5px;
+  background:var(--surface);border:1px solid var(--line);border-radius:999px;
+  padding:2px 9px;font-size:11.5px;font-weight:700;letter-spacing:0;
+  color:var(--ink);text-transform:none;white-space:nowrap}
+.opp-fit .dot{width:6px;height:6px;border-radius:50%;background:var(--voltage);flex:none}
+
+/* Fit read leads the panel, so it carries slightly more presence than the rest. */
+.opp-md .md-p,.opp-md .md-ul li{font-size:13.5px;line-height:1.55}
+.opp-lead .md-p,.opp-lead .md-ul li{font-size:14px;color:var(--ink)}
+.opp-md .md-h{font-size:12px;margin-top:12px}
+
+/* RULE 1 — never render silence. An empty field says what its emptiness means,
+   in the same ink as a real answer so it reads as information, not as absence. */
+.opp-empty{margin:0;font-size:13.5px;font-style:italic;color:var(--muted);
+  border-left:2px solid var(--line);padding:2px 0 2px 10px}
+.opp-empty--sm{font-size:12.5px;color:var(--faint)}
+.opp-empty-inline{font-style:italic;color:var(--muted);font-size:13px}
+
+/* Company background — collapsed by default when there IS a dossier. */
+.opp-details{margin-top:16px}
+.opp-details summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}
+.opp-details summary::-webkit-details-marker{display:none}
+.opp-details summary .opp-sec-h{margin:0}
+.opp-details summary:hover .opp-sec-h{color:var(--voltage-deep)}
+.opp-caret--sm{font-size:15px;color:var(--faint)}
+.opp-details[open] .opp-caret--sm{transform:rotate(-90deg)}
+.opp-details-body{margin-top:9px;padding-left:11px;border-left:2px solid var(--line)}
+
+/* the four facts — comp, work mode, lane, logged */
+.opp-facts{display:flex;flex-wrap:wrap;gap:9px 26px;margin:18px 0 0;
+  padding:12px 14px;background:var(--panel);border-radius:10px}
+.opp-fact dt{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 3px}
+.opp-fact dd{margin:0;font-size:13.5px;color:var(--ink);line-height:1.4}
+
+/* Apply vs posting: two different things, kept visually distinct on purpose. */
+.opp-links{display:flex;align-items:center;flex-wrap:wrap;gap:10px 16px;margin-top:16px}
+.opp-apply{display:inline-flex;align-items:center;gap:7px;background:var(--voltage);
+  color:var(--on-dark);font-weight:650;font-size:13.5px;text-decoration:none;
+  padding:9px 17px;border-radius:9px;transition:background .15s ease}
+.opp-apply:hover{background:var(--voltage-deep)}
+.opp-posting{display:inline-flex;align-items:center;gap:5px;color:var(--steel-2);
+  font-size:12.5px;text-decoration:none}
+.opp-posting:hover{color:var(--ink);text-decoration:underline}
+.opp-posting .ext-ico{width:13px;height:13px}
+
+/* History — the dated append-only log. Quiet, small, and capped so a long
+   provenance trail can never push the decision buttons off the screen. */
+.opp-notes{margin-top:18px;padding-top:13px;border-top:1px solid var(--line)}
+.opp-notes-h{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 6px}
+.opp-notes-body{font-size:12px;line-height:1.55;color:var(--muted);white-space:pre-wrap;
+  max-height:132px;overflow-y:auto}
+
+/* the two decisions, repeated at the foot so nobody scrolls back up to decide */
+.opp-actions{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-top:16px}
+.opp-detail-link{font:inherit;font-size:12.5px;color:var(--steel-2);background:none;
+  border:none;padding:0;cursor:pointer;text-align:left}
+.opp-detail-link:hover{color:var(--ink);text-decoration:underline}
+.opp-actions .edit-status{font-size:12px;margin-left:auto}
+.opp-btn{font:inherit;font-size:13px;font-weight:500;padding:8px 18px;border-radius:9px;
+  cursor:pointer;border:1px solid transparent;
+  transition:background .15s ease,border-color .15s ease,color .15s ease}
+.opp-btn:focus-visible{outline:2px solid var(--voltage);outline-offset:2px}
+/* Pursue — the primary action, Ember Copper per DESIGN.md */
+.opp-btn--pursue{background:var(--voltage);color:var(--on-dark)}
+.opp-btn--pursue:hover{background:var(--voltage-deep)}
+/* already pursuing: still copper, but stated rather than urged */
+.opp-btn--pursue.is-on{background:var(--voltage-soft);color:var(--voltage-deep);
+  border-color:var(--voltage-line)}
+.opp-btn--pursue.is-on:hover{background:var(--voltage-line)}
+/* Close — muted clay-gray; a close is routine, not a failure */
+.opp-btn--close{background:var(--surface);color:var(--closed);border-color:var(--line)}
+.opp-btn--close:hover{background:var(--panel);color:var(--muted)}
+
+@media (max-width:640px){
+  .opp-panel.is-open>.opp-panel-in{padding:2px 15px 16px 16px}
+  .opp-facts{gap:9px 18px}
+  .opp-actions .edit-status{margin-left:0;width:100%;order:9}
+}
+
+/* ---- Apply / posting on the DETAIL view's facts strip ----
+   Same two links as the board panel, sized to sit beside "Check comp →". */
+.opp-apply--sm{font-size:12.5px;font-weight:600;padding:7px 15px;border-radius:8px;gap:6px}
+.facts .opp-posting{font-size:12.5px}
+/* The honest empty state, as a facts-strip pill. A dashed hairline reads as
+   "something belongs here and isn't" — informative, not alarming. A close is
+   routine and so is a missing URL; neither is a failure. */
+.link-missing{display:inline-flex;align-items:center;font-size:12px;font-style:italic;
+  color:var(--muted);background:transparent;border:1px dashed var(--line);
+  border-radius:999px;padding:6px 13px}
+
+/* ---- Collapsed-row link affordance: apply path vs posting ----
+   Copper means "you can apply from here" everywhere in the app. A posting-only
+   row gets the quiet steel icon instead, so the board can never show the same
+   mark for a resolved apply path and a link that just goes to a job ad. */
+.row-apply{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;
+  background:var(--voltage);color:var(--on-dark);font-size:11px;font-weight:600;
+  letter-spacing:.02em;text-decoration:none;padding:4px 9px;border-radius:999px;
+  white-space:nowrap;transition:background .15s ease}
+.row-apply:hover{background:var(--voltage-deep)}
+.ext-link--posting{color:var(--steel-2)}
+.ext-link--posting:hover{background:var(--panel);color:var(--ink)}
+
+:root{--studio-serif:Georgia,'Times New Roman',serif}body{background:var(--paper)}button,input,textarea,select{font:inherit}button,summary{cursor:pointer}button{min-height:44px}button:focus-visible,summary:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--voltage);outline-offset:4px}[hidden]{display:none!important}.studio{display:grid;grid-template-columns:210px minmax(0,1fr);min-height:100vh}.rail{background:var(--steel);color:var(--on-dark);padding:36px 20px;display:flex;flex-direction:column}.studio-brand{display:flex;align-items:center;gap:12px;font-size:24px;letter-spacing:-.04em;padding:0 8px}.studio-brand>span{font-size:32px;color:var(--gold)}.studio-brand small{display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-top:3px}.brief-nav{display:flex;flex-direction:column;gap:7px;margin-top:62px}.brief-nav button{text-align:left;border:0;border-radius:6px;padding:12px 16px;background:transparent;color:var(--on-dark);font-size:15px}.brief-nav button:hover{background:rgba(255,255,255,.08)}.brief-nav [aria-selected=true]{background:var(--paper);color:var(--steel);font-weight:650}.rail-note{font-family:var(--studio-serif);font-size:19px;line-height:1.55;color:var(--on-dark);opacity:.8;margin-top:auto;padding:60px 8px 0}.studio-main{width:100%;max-width:1240px;margin:auto;padding:28px 5vw 60px;min-width:0}.utility{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:42px}.utility details{max-width:540px}.utility summary{min-height:44px;display:flex;align-items:center;color:var(--muted);font-size:12px}.utility summary::before{content:'○';margin-right:8px;color:var(--voltage-deep)}.utility details[open] summary::before{content:'−'}.disclosure-body{font-size:13px;padding:4px 16px;border-left:2px solid var(--line)}.primary{background:var(--steel);color:var(--on-dark);border:0;border-radius:5px;padding:10px 17px;font-weight:600;font-size:14px}.primary:hover{background:var(--steel-deep)}.utility>.primary{white-space:nowrap}.text-button{border:0;background:none;color:var(--voltage-deep);font-size:14px;font-weight:600;padding:7px 0;text-align:left}.text-button:hover{text-decoration:underline}.kicker{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--voltage-deep);font-weight:650;margin:0 0 12px}.page-heading{max-width:860px;margin-bottom:34px}.page-heading h1{font-family:var(--studio-serif);font-size:clamp(34px,4.2vw,52px);font-weight:400;letter-spacing:-.045em;line-height:1.1}.page-heading>p:last-child{font-size:15px;color:var(--muted);max-width:640px;margin:16px 0 0}.today-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(245px,1fr);gap:40px}.today-grid>*,.row-body{min-width:0}h2{font-size:18px;font-weight:600}h3{font-size:14px}.briefing{margin-bottom:24px}.briefing h2{display:inline;margin-right:12px}.fixture-label{font-size:11px;color:var(--muted);display:block;margin:5px 0 12px}.briefing p{font-size:14px;line-height:1.7;margin:10px 0}.meta{font-size:12px;color:var(--muted);line-height:1.65}.focus{padding:30px;background:var(--surface);border-left:3px solid var(--voltage);box-shadow:0 8px 30px rgba(47,74,58,.04);margin-bottom:28px}.focus h2{font-family:var(--studio-serif);font-size:clamp(26px,3vw,36px);line-height:1.15;font-weight:400;letter-spacing:-.025em;overflow-wrap:anywhere}.reason{font-size:15px;line-height:1.7;margin:18px 0}.actions{display:flex;gap:10px 20px;align-items:center;flex-wrap:wrap;margin-top:22px}.focus .primary{background:var(--voltage-deep)}.secondary-actions h2{font-size:15px;margin-bottom:10px}.task-row{display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--line);padding:16px 0}.task-row input{width:24px;height:24px;flex:none;accent-color:var(--steel);cursor:pointer;outline-offset:8px}.task-link{border:0;background:none;text-align:left;padding:0;font-weight:600;line-height:1.4;color:var(--ink);font-size:15px;overflow-wrap:anywhere}.task-link:hover{text-decoration:underline;text-decoration-color:var(--voltage)}.task-row .meta{margin:0}.row-body{flex:1}.row-arrow{color:var(--voltage-deep)}.is-done .task-link{text-decoration:line-through;color:var(--muted)}.reference{font-size:11px;color:var(--voltage-deep)}.planner{margin-top:22px;border-bottom:1px solid var(--line);padding-bottom:12px;font-size:13px}.planner summary{min-height:44px;padding:10px 0;color:var(--muted)}.planner input{width:100px;display:block;margin-top:8px}.day-aside{border-left:1px solid var(--line);padding-left:28px}.day-aside>section{padding:0 0 26px;margin-bottom:26px;border-bottom:1px solid var(--line)}.day-aside>section:last-child{border:0}.day-aside p{font-size:14px}.decision .actions{gap:4px 18px;margin-top:12px}.decision-response{border-left:2px solid var(--steel);padding-left:10px}.appointment{display:grid;grid-template-columns:50px 1fr;column-gap:10px;margin:16px 0}.appointment-date{font-size:12px;color:var(--muted);padding-top:11px}.appointment small{grid-column:2;color:var(--muted)}.appointment button{font-size:14px;color:var(--ink)}.progress-link{display:block;border:0;background:none;color:var(--steel);text-align:left;padding:10px 0;font:inherit;font-size:14px;overflow-wrap:anywhere}.progress-link::before{content:'✓ ';color:var(--voltage-deep)}.workspace-summary{display:flex;gap:24px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:18px 0;color:var(--steel);font-size:14px;margin-bottom:18px}.workspace-context{font-size:12px;color:var(--muted);max-width:720px}.task-group{margin:28px 0}.task-group>summary{font-size:16px;font-weight:600;min-height:44px;padding:8px 0}.task-group h2{margin-bottom:4px}.notes-area{margin-top:40px;padding-top:26px;border-top:1px solid var(--line)}.notes-area h2{font-size:16px;margin-bottom:14px}#note-form{display:flex;align-items:flex-start;gap:16px}textarea,input,select{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:10px;max-width:100%}textarea{resize:vertical}#note{flex:1;min-width:0}#note-form button{white-space:nowrap}.note-entry{border-top:1px solid var(--line);padding:16px 0;font-size:14px}.note-entry p{white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 8px}.history{margin-top:24px;font-size:12px;color:var(--muted)}.history summary{min-height:44px;padding:10px 0}#history-list p{overflow-wrap:anywhere}#feedback{display:flex;align-items:center;justify-content:space-between;gap:15px;background:var(--panel);padding:8px 16px;border-left:3px solid var(--steel);margin:0 0 22px;font-size:13px}.skip{position:absolute;left:12px;top:-80px;background:var(--surface);padding:10px;z-index:5}.skip:focus{top:8px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}dialog{position:fixed;inset:0 0 0 auto;margin:0;width:min(590px,100%);height:100dvh;max-height:100dvh;max-width:100%;border:0;border-left:1px solid var(--line);background:var(--paper);color:var(--ink);padding:24px 32px;overflow:auto}dialog::backdrop{background:rgba(20,34,27,.45)}.panel-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}.panel-top .kicker{margin:0}#task-detail h2{font-family:var(--studio-serif);font-weight:400;font-size:34px;line-height:1.2;margin-bottom:16px;overflow-wrap:anywhere}#task-detail p{white-space:pre-wrap;overflow-wrap:anywhere}#task-detail h3{margin-top:28px}dialog label{display:block;font-size:13px;margin:15px 0 6px}dialog input,dialog select,dialog textarea{width:100%}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.dialog-actions{display:flex;justify-content:flex-end;gap:14px;margin-top:24px}.dialog-actions button{min-height:44px}#form-error{color:var(--flag)}
+@media(min-width:1500px){.studio-main{padding-left:70px;padding-right:70px}}@media(max-width:1000px){.studio{grid-template-columns:165px minmax(0,1fr)}.rail{padding:28px 12px}.studio-brand{font-size:21px}.studio-main{padding:24px 28px 48px}.today-grid{gap:26px;grid-template-columns:minmax(0,1.4fr) minmax(210px,1fr)}.day-aside{padding-left:20px}.focus{padding:24px}}@media(max-width:760px){.studio{display:block}.rail{padding:17px 20px}.studio-brand{font-size:21px}.studio-brand small{font-size:9px}.studio-brand>span{font-size:27px}.brief-nav{margin-top:20px;flex-direction:row;gap:3px;flex-wrap:wrap}.brief-nav button{padding:8px 12px;font-size:13px}.rail-note{display:none}.studio-main{padding:22px 22px 40px}.utility{gap:12px;margin-bottom:30px}.utility>.primary{font-size:12px;padding:8px 12px}.utility summary{font-size:11px}.today-grid{display:block}.day-aside{border:0;padding:32px 0 0}.day-aside>section{margin-bottom:20px;padding-bottom:20px}.page-heading{margin-bottom:28px}.page-heading h1{font-size:38px}.focus{padding:24px 22px}.focus h2{font-size:30px}.notes-area{margin-top:24px}#note-form{display:block}#note{width:100%}dialog{padding:20px}.workspace-summary{gap:15px;font-size:12px}.task-link{font-size:14px}}@media(max-width:380px){.studio-main{padding:20px 16px}.utility{flex-wrap:wrap}.form-grid{grid-template-columns:1fr}.page-heading h1{font-size:34px}.rail{padding:15px}.brief-nav button{padding:8px 10px}}
+
+.decision summary{min-height:44px;padding:10px 0;font-size:13px;color:var(--voltage-deep)}
+
+#section-description:empty{display:none}
+/* Override legacy app metadata hiding; dates and planner feedback remain visible on mobile. */
+.studio .meta,dialog .meta{display:block}.reference{display:block}.task-link{display:block;width:100%}
+.brief-nav button[aria-selected=true]:hover{background:var(--paper);color:var(--steel)}
+
+/* Daily art and an optional reading corner; tasks keep the primary emphasis. */
+.page-heading{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:30px;max-width:none;align-items:center}.heading-copy{min-width:0}.heading-copy>p:last-child{font-size:15px;color:var(--muted);margin:16px 0 0;max-width:600px}.page-heading h1{font-size:clamp(32px,3.6vw,48px)}.daily-art{margin:0;min-width:0}.daily-art svg{display:block;width:100%;height:auto}.daily-art figcaption,.art-demo{font-size:10px;color:var(--muted);display:block;margin-top:6px}.art-controls{display:flex;flex-wrap:wrap;gap:0 12px}.art-controls button{font-size:11px;min-height:36px}.art-demo{margin-top:0}.daily-spark{margin-top:26px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 0}.daily-spark>summary{display:flex;align-items:center;gap:12px;min-height:54px;font-family:var(--studio-serif);font-size:23px;list-style:none}.daily-spark>summary::after{content:'+';font-family:var(--sans);margin-left:auto;color:var(--voltage-deep)}.daily-spark[open]>summary::after{content:'−'}.daily-spark>summary small{font-family:var(--sans);font-size:11px;color:var(--muted)}.spark-mark{color:var(--voltage-deep);font-size:29px}.spark-columns{padding:20px 0 10px}.spark-columns h2{font-family:var(--studio-serif);font-size:27px;font-weight:400;line-height:1.2;letter-spacing:-.02em}.spark-columns p{font-size:14px;line-height:1.75}.spark-lens{padding:22px 24px;background:var(--panel);border-radius:3px}.archetype{display:block;color:var(--voltage-deep);font-size:12px;margin-top:8px}.spark-discovery{padding:28px 4px 12px}.spark-source{color:var(--voltage-deep);font-size:12px;text-decoration:underline;text-underline-offset:3px;display:inline-block;min-height:32px}.spark-explore{margin-top:12px}.spark-explore summary{font-size:12px;color:var(--voltage-deep);min-height:44px;padding:10px 0}.spark-explore small,.spark-columns .spark-note{font-size:11px;color:var(--muted);line-height:1.6}.spark-columns .kicker{font-size:10px}.spark-note{margin-bottom:0}@media(max-width:1100px){.page-heading{grid-template-columns:minmax(0,1fr) 210px;gap:20px}}@media(max-width:760px){.page-heading{grid-template-columns:1fr;gap:18px}.daily-art{max-width:none}.daily-art svg{height:100px;object-fit:cover}.art-controls{float:right}.daily-art figcaption{padding-top:4px}.daily-spark>summary{flex-wrap:wrap;gap:8px}.daily-spark>summary small{font-size:10px}.page-heading h1{font-size:36px}.spark-lens{padding:20px}.art-controls button{min-height:44px}}@media(prefers-reduced-motion:reduce){.daily-art *,.daily-spark *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Final restrained pass: review controls are confined to About. */
+.utility{margin-bottom:32px}.utility summary{font-size:12px}.disclosure-body .art-controls{float:none;gap:18px}.disclosure-body .art-controls button{min-height:44px;font-size:12px}.page-heading{display:block;margin-bottom:30px}.with-art .page-heading{display:grid;grid-template-columns:minmax(0,1fr) 164px;gap:28px;align-items:center}.page-heading h1{font-size:46px}.daily-art img{display:block;width:100%;height:116px;object-fit:contain;background:var(--surface);border:1px solid var(--line);padding:5px}.daily-art figcaption{line-height:1.4;font-size:10px}.daily-art a,.story-art a,.tarot-art a{color:var(--muted);text-decoration:underline;text-underline-offset:2px}.daily-art a:focus-visible,.story-art a:focus-visible,.tarot-art a:focus-visible{outline:3px solid var(--voltage)}.briefing{margin-bottom:20px}.briefing h2{font-size:14px}.briefing p{font-size:15px;margin:8px 0 0;line-height:1.65}.focus{padding:28px;margin-bottom:26px}.focus .reason{font-size:15px}.task-row{padding:13px 0}.day-aside>section{padding-bottom:23px;margin-bottom:23px}.workspace-summary{margin-bottom:14px}.workspace-context{max-width:600px}.notes-area textarea{min-height:80px}#feedback{overflow-wrap:anywhere}.daily-spark>summary{font-size:23px;gap:12px}.daily-spark>summary small{font-size:11px}.spark-lens{display:flow-root;background:var(--surface);border:1px solid var(--line);padding:22px}.spark-discovery{display:flow-root}.story-art{margin:0 0 18px}.story-art img{display:block;max-width:100%;width:100%;height:200px;object-fit:contain;background:var(--surface);padding:8px;border:1px solid var(--line)}.story-art figcaption,.tarot-art figcaption{font-size:10px;line-height:1.5;margin-top:5px}.tarot-art{float:right;width:92px;margin:0 0 16px 18px}.tarot-art img{display:block;width:100%;max-height:165px;object-fit:contain}.spark-columns .spark-note{clear:both}.spark-columns p{font-size:15px;line-height:1.7}.spark-explore p{font-size:14px}.spark-columns .kicker{margin-top:0}.spark-source{margin-top:4px}.rail-note{font-size:17px;opacity:.85}
+@media(max-width:760px){.utility{margin-bottom:25px}.page-heading h1{font-size:38px}.with-art .page-heading{grid-template-columns:minmax(0,1fr) 112px;gap:16px}.daily-art img{height:88px}.daily-art figcaption{font-size:9px}.heading-copy>p:last-child{font-size:14px}.today-grid{display:block}.focus{padding:24px 22px}.spark-lens{padding:20px}.daily-spark>summary{font-size:22px}.daily-spark>summary small{font-size:10px}.story-art img{height:180px}}
+@media(max-width:380px){.with-art .page-heading{grid-template-columns:1fr}.daily-art{max-width:160px}.tarot-art{width:75px}.daily-spark>summary small{max-width:120px}}
+
+[hidden]{display:none!important} #auth-gate input{display:block;width:100%;padding:.7rem;margin:1rem 0} .auth-actions{display:flex;flex-wrap:wrap;gap:1rem;margin-top:1rem} .utility{flex-wrap:wrap} .briefing p{white-space:pre-wrap}
+
+#set-password-form{display:grid;gap:.7rem;max-width:32rem} #set-password-form input{padding:.7rem;font:inherit;border:1px solid #aaa;border-radius:6px}

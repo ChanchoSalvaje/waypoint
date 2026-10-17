@@ -1,0 +1,58 @@
+/* Bounded art/readability pass. No fixed text heights, clipping, or line clamps. */
+.studio-main,.studio-main *,.studio dialog *{min-width:0}
+.studio-main{overflow-wrap:anywhere}
+.studio button,dialog button{white-space:normal;max-width:100%}
+.studio .utility{gap:.6rem 1rem;align-items:center}
+.studio .utility details{flex:1 1 16rem}
+.studio .page-heading{margin-bottom:1.6rem}
+.studio .with-art .page-heading{grid-template-columns:minmax(0,1fr) minmax(12rem,18rem);gap:2rem;align-items:start}
+.studio .daily-art{max-width:none}
+.studio .art-image img{display:block;width:100%;height:11rem;object-fit:contain;background:var(--surface);padding:.4rem;border:1px solid var(--line)}
+.studio .art-image svg{display:block;width:100%;height:auto}
+.studio .daily-art figcaption,.studio .spark-art figcaption{font-size:.69rem;line-height:1.55;margin-top:.45rem;color:var(--muted)}
+.art-thought{display:block;margin-top:.5rem;font-size:.8rem;line-height:1.55;color:var(--ink)}
+.art-fallback{display:block;font-size:.72rem;line-height:1.5;padding:.4rem 0;color:var(--muted)}
+.spark-feature{display:grid;grid-template-columns:10rem minmax(0,1fr);align-items:start;gap:1.4rem;padding:1.2rem;background:var(--surface);border:1px solid var(--line);border-radius:.5rem;margin:0 0 2rem}
+.spark-feature{margin-bottom:2rem}
+.spark-art{margin:0}.spark-art a{color:var(--muted)}
+.studio .spark-art .art-image img{height:9rem;background:var(--paper);padding:.3rem}
+.spark-copy h2{font-family:var(--studio-serif);font-size:1.65rem;line-height:1.2;font-weight:400;margin:.35rem 0}
+.spark-copy .kicker{margin:0;font-size:.65rem}.spark-thought{font-size:.95rem;line-height:1.6;margin:.5rem 0}
+.spark-feature .daily-spark{margin-top:.5rem;padding:0;border:0}
+.spark-feature .daily-spark>summary{display:flex;font-family:var(--sans);font-size:.8rem;line-height:1.5;min-height:2.75rem;color:var(--voltage-deep)}
+.spark-columns{padding:.5rem 0 0}.spark-columns h3{font-family:var(--studio-serif);font-size:1.45rem;font-weight:400;line-height:1.3;margin:.4rem 0}
+.spark-columns p{font-size:.9rem;line-height:1.7}.spark-lens{padding:1rem}.spark-discovery{padding:1.2rem 0 0}
+.studio .readable-body{font-size:1rem;line-height:1.75;max-width:70ch;overflow-wrap:anywhere;display:flow-root}
+.studio .readable-body p{font-size:inherit;line-height:inherit;white-space:normal;margin:0 0 1rem}
+.studio .readable-body p{margin:0 0 1rem}
+.studio .readable-body h3{font-size:1.05rem;line-height:1.5;margin:1.4rem 0 .6rem;font-weight:650}
+.studio .readable-body h3:first-child{margin-top:0}
+.studio .readable-body ul,.studio .readable-body ol{padding-left:1.5em;margin:.6rem 0 1.2rem}
+.studio .readable-body li{margin:.6rem 0;padding-left:.2em}
+.studio .readable-body a{color:var(--voltage-deep);text-decoration:underline;text-underline-offset:.18em;overflow-wrap:anywhere}
+.studio .briefing h2{display:block;font-size:1.1rem;margin:0 0 1rem;padding-bottom:.65rem;border-bottom:1px solid var(--line)}
+.studio .briefing{margin:0 0 2rem}
+.studio .note-entry{display:flow-root;padding:1.3rem 0}.studio .note-entry time{display:block;margin:.6rem 0 0}
+.studio .notes-area{display:flow-root;clear:both;margin-top:2rem}
+.studio .appointment{display:grid;grid-template-columns:4.6rem minmax(0,1fr);gap:.15rem .7rem;align-items:start;margin:1.2rem 0}
+.studio .appointment-date{font-size:.78rem;white-space:normal;line-height:1.5;padding-top:.65rem}
+.studio .appointment button{line-height:1.5;overflow-wrap:anywhere;min-width:0}
+.studio .appointment small{grid-column:2;line-height:1.5}
+.studio .workspace-summary{flex-wrap:wrap;gap:.5rem 1.3rem}
+.studio .task-row{align-items:flex-start}.studio .task-row input{margin-top:.25rem}
+.studio .task-link{font-size:.95rem;line-height:1.5}.studio .meta{font-size:.8rem;line-height:1.6}
+.studio .today-grid{grid-template-columns:minmax(0,1.65fr) minmax(0,1fr)}
+.studio .day-aside{min-width:0}.studio section,.studio article{min-width:0;max-width:100%}
+.studio .primary{white-space:normal}.studio .heading-copy p{font-size:.95rem;line-height:1.6}
+.studio #note-form{flex-wrap:wrap}.studio #note{flex:1 1 15rem;font-size:1rem;line-height:1.6}
+.studio textarea,dialog textarea{font-size:1rem;line-height:1.6}
+@media(max-width:900px){.studio .today-grid{display:block}.studio .day-aside{padding:1.5rem 0 0;border:0}.studio .day-aside>section{padding-bottom:1.5rem}}
+@media(max-width:760px){
+ .studio .rail{padding:1rem}.studio .brief-nav{gap:.25rem;margin-top:1rem}.studio .brief-nav button{font-size:.85rem;padding:.6rem .75rem}
+ .studio .studio-main{padding:1.2rem 1rem 2.5rem}.studio .utility{margin-bottom:1.5rem}.studio .utility details{flex-basis:100%}
+ .studio .with-art .page-heading{grid-template-columns:1fr;gap:1.1rem}.studio .daily-art{display:grid;grid-template-columns:7rem minmax(0,1fr);gap:.75rem;align-items:start}.studio .daily-art figcaption{margin:0;font-size:.7rem}.studio .daily-art .art-image img{height:7rem}
+ .spark-feature{grid-template-columns:6rem minmax(0,1fr);gap:.85rem;padding:.9rem}.studio .spark-art .art-image img{height:6rem}.spark-art figcaption{font-size:.65rem}.spark-copy h2{font-size:1.3rem}
+ .spark-copy .daily-spark[open]{grid-column:1/-1}.spark-feature:has(.daily-spark[open]){grid-template-columns:1fr}.spark-feature:has(.daily-spark[open]) .spark-art{max-width:12rem}
+ .studio .focus{padding:1.3rem}.studio .focus h2{font-size:1.8rem}.studio .notes-area #note-form{display:block}.studio #note-form button{margin-top:.4rem}
+}
+@media(max-width:350px){.spark-feature{grid-template-columns:1fr}.spark-art{max-width:10rem}.studio .daily-art{grid-template-columns:1fr}.studio .daily-art .art-image{max-width:11rem}.studio .appointment{grid-template-columns:1fr}.studio .appointment small{grid-column:1}.studio .appointment-date{padding:0}}
