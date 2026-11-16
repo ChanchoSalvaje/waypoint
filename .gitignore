@@ -14,3 +14,5 @@ Claude outputs/
 
 # Local Claude Code settings (per-machine)
 .claude/settings.local.json
+
+.preview/

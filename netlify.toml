@@ -24,3 +24,7 @@
 [[edge_functions]]
   path = "/*"
   function = "auth"
+
+# Direct-employer pilot: hourly at :10 UTC (also :10 in Tucson).
+[functions."collect-employer-jobs"]
+  schedule = "10 * * * *"

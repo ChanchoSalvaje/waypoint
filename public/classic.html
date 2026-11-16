@@ -1,0 +1,1698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Waypoint Command Center</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/waypoint-ui.css">
+<!-- Activity Log timeline: display-only parser + renderer for the Notes field. -->
+<link rel="stylesheet" href="/notes-timeline.css">
+<script src="/notes-timeline.js"></script>
+<script src="/fit-read.js"></script>
+</head>
+<body>
+
+<!-- ===================== SHARED TOP BAR (every view) ===================== -->
+<header class="topbar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 100 100" width="30" height="30" aria-hidden="true"><path d="M50 16 L57.8 42.2 L84 50 L57.8 57.8 L50 84 L42.2 57.8 L16 50 L42.2 42.2 Z" fill="#B85C38"/><circle cx="50" cy="50" r="3.5" fill="#F3EEE4"/></svg>
+    <div><div class="name">Waypoint</div><div class="sub">Command Center</div></div>
+  </div>
+  <div class="top-actions">
+    <a class="top-btn" href="/spore/">Spore &rsaquo;</a>
+    <button type="button" class="top-btn" onclick="showToday()">Today &rsaquo;</button>
+    <button type="button" class="top-btn" onclick="showSignals()">Signals &rsaquo;</button>
+    <button type="button" class="top-btn" onclick="showComp()">Comp &rsaquo;</button>
+    <button type="button" class="top-btn" onclick="showSettings()">Settings &rsaquo;</button>
+  </div>
+</header>
+
+<!-- ===================== DASHBOARD VIEW ===================== -->
+<div id="view-dashboard" class="page">
+  <h1>Here is the way, Tim.</h1>
+  <div class="sub" id="dash-sub">Loading your pipeline&hellip;</div>
+  <div class="rule"></div>
+
+  <div id="health-strip" class="health-strip hidden" aria-live="polite"></div>
+
+  <div class="grid grid-4" id="tiles"></div>
+
+  <div class="eyebrow">Today &mdash; next actions</div>
+  <div class="today" id="today"></div>
+
+  <div class="toolbar">
+    <div class="eyebrow">Opportunities</div>
+    <button class="toggle" id="closedToggle">Show closed</button>
+  </div>
+  <div class="listcard" id="list"></div>
+
+  <footer>Reading live from your Airtable base &mdash; read-only.</footer>
+</div>
+
+<!-- ===================== DETAIL VIEW ===================== -->
+<div id="view-detail" class="page hidden"></div>
+
+<!-- ===================== COMP VIEW (client-side math only) ===================== -->
+<div id="view-comp" class="page hidden">
+  <button class="back" onclick="compBack()">&lsaquo; Back to pipeline</button>
+  <h1>Comp check</h1>
+  <div class="sub">Quick client-side math &mdash; nothing here reads or writes your pipeline.</div>
+  <div class="rule"></div>
+
+  <section class="card">
+    <h2>W-2 comp check</h2>
+    <div class="comp-grid">
+      <label for="w2_base">Base salary</label><input id="w2_base" type="number" inputmode="decimal" value="150000" oninput="computeW2()">
+      <label for="w2_bonus">Target bonus</label><input id="w2_bonus" type="number" inputmode="decimal" value="20000" oninput="computeW2()">
+      <label for="w2_equity">Equity / RSU (annual)</label><input id="w2_equity" type="number" inputmode="decimal" value="0" oninput="computeW2()">
+      <label for="w2_benefits">Benefits (401k + health)</label><input id="w2_benefits" type="number" inputmode="decimal" value="26000" oninput="computeW2()">
+      <label for="w2_floor">Cash floor</label><input id="w2_floor" type="number" inputmode="decimal" value="195000" oninput="computeW2()">
+    </div>
+    <div class="comp-result">
+      <div class="comp-figure"><div class="k">Cash comp</div><div class="v" id="w2_cash">&mdash;</div></div>
+      <div class="comp-figure"><div class="k">Total comp</div><div class="v" id="w2_total">&mdash;</div></div>
+    </div>
+    <div class="comp-banner" id="w2_banner"></div>
+    <div class="comp-sub">The floor is a reference, not a hard gate &mdash; a role's other draws can be worth closing a gap.</div>
+  </section>
+
+  <section class="card">
+    <h2>1099 corp-to-corp rate</h2>
+    <div class="comp-grid">
+      <label for="c_target">Target annual comp</label><input id="c_target" type="number" inputmode="decimal" value="195000" oninput="compute1099()">
+      <label for="c_hours">Billable hours / yr</label><input id="c_hours" type="number" inputmode="decimal" value="1800" oninput="compute1099()">
+      <label for="c_benefits">Self-funded benefits</label><input id="c_benefits" type="number" inputmode="decimal" value="24000" oninput="compute1099()">
+      <label for="c_overhead">Overhead %</label><input id="c_overhead" type="number" inputmode="decimal" value="10" oninput="compute1099()">
+      <label for="c_tax">Employer-side tax %</label><input id="c_tax" type="number" inputmode="decimal" value="7.65" oninput="compute1099()">
+    </div>
+    <div class="comp-rate">
+      <div class="k">Required corp-to-corp rate</div>
+      <div class="v" id="c_rate">&mdash;</div>
+      <div class="naive" id="c_naive">&mdash;</div>
+    </div>
+  </section>
+
+  <div class="comp-caveat">Estimates for planning &mdash; not tax or financial advice. Confirm specifics with a professional.</div>
+</div>
+
+<!-- ===================== SETTINGS VIEW (admin) ===================== -->
+<div id="view-settings" class="page hidden">
+  <button class="back" onclick="settingsBack()">&lsaquo; Back to pipeline</button>
+  <h1>Settings</h1>
+  <div class="sub">Tune the mine &mdash; posture, comp gates, lanes, and hard filters. Saved to your Settings record.</div>
+  <div class="rule"></div>
+  <div id="settings-body"><div class="empty">Loading settings&hellip;</div></div>
+</div>
+
+<!-- ===================== SIGNALS VIEW (board) ===================== -->
+<div id="view-signals" class="page hidden">
+  <button class="back" onclick="signalsBack()">&lsaquo; Back to pipeline</button>
+  <h1>Signals</h1>
+  <div class="sub">Pre-posting triggers &mdash; AI exec hires, CoE launches, public commitments. Triage and stage; pitching stays a Council step.</div>
+  <div class="rule"></div>
+  <div id="signals-body"><div class="empty">Loading signals&hellip;</div></div>
+  <div id="sig-toast" class="sig-toast hidden"></div>
+</div>
+
+<!-- ===================== TODAY VIEW (daily triage) ===================== -->
+<div id="view-today" class="page hidden">
+  <button class="back" onclick="todayBack()">&lsaquo; Back to pipeline</button>
+  <h1>Today's jobs</h1>
+  <div class="sub" id="today-sub">Freshly saved roles, newest first. Pursue it or close it &mdash; one pass, no backlog.</div>
+  <div class="rule"></div>
+  <div id="today-body"><div class="empty">Loading today&rsquo;s jobs&hellip;</div></div>
+</div>
+
+<!-- modal root (Close confirm popover) -->
+<div id="modal-root"></div>
+
+<script>
+/* ============================================================
+   DATA SOURCE  —  Live Airtable data via the serverless function
+   at /.netlify/functions/jobs. We fetch once on load, store the
+   result in JOBS, then render from it. Everything below renders
+   from whatever getJobs() returns, so this stays the only place
+   the data source is defined. Strictly read-only.
+   ============================================================ */
+var JOBS = [];
+var JOBS_LOADED = false;
+function getJobs(){ return JOBS; }
+
+async function loadJobs(){
+  try{
+    var resp = await fetch("/.netlify/functions/jobs");
+    var data = await resp.json();
+    if(!resp.ok || (data && data.error)){
+      showLoadError((data && data.error) || ("Request failed ("+resp.status+")"));
+      return;
+    }
+    JOBS = (data && data.jobs) || [];
+    JOBS_LOADED = true;
+    renderDashboard();
+    // If Today is already open (clicked before the fetch landed), fill it in now.
+    if(!document.getElementById("view-today").classList.contains("hidden")) renderToday();
+  }catch(err){
+    showLoadError("Couldn't reach the jobs function. Is `netlify dev` running? ("+err+")");
+  }
+}
+
+/* ============================================================
+   BACKDOOR HEALTH STRIP — "is the machine alive?" at a glance.
+   Read-only derived numbers via /.netlify/functions/health. Stays hidden
+   until it loads (and on error), so it never shows an empty/broken box.
+   ============================================================ */
+function healthAge(n){ if(n==null) return "—"; if(n===0) return "Today"; if(n===1) return "Yesterday"; return n+"d ago"; }
+function healthDot(color){ var c={green:"hd-green",amber:"hd-amber",red:"hd-red"}[color]||""; return '<span class="health-dot '+c+'"></span>'; }
+function healthCell(color,label,val,sub,subWarn){
+  return '<div class="health-cell">'+healthDot(color)+
+    '<div class="health-txt"><div class="health-lbl">'+esc(label)+'</div>'+
+    '<div class="health-val">'+esc(val)+'</div>'+
+    (sub?'<div class="health-sub'+(subWarn?" warn":"")+'">'+esc(sub)+'</div>':'')+
+    '</div></div>';
+}
+async function loadHealth(){
+  try{
+    var resp=await fetch("/.netlify/functions/health");
+    var d=await resp.json();
+    if(!resp.ok||!d||d.error||!d.ok) return;   // stay hidden on any failure — non-critical
+    var probe=d.poll.probeFailed||0;
+    var awaiting=(d.awaiting.new||0)+(d.awaiting.reviewing||0);
+    var html=
+      healthCell(d.poll.color,"ATS poll",healthAge(d.poll.ageDays),
+        (probe>0?probe+" need slug":"all slugs resolved"), probe>0)+
+      healthCell(d.sweep.color,"Signals sweep",healthAge(d.sweep.ageDays),
+        d.sweep.last?("as of "+new Date(d.sweep.last+"T00:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric"})):"")+
+      '<div class="health-cell health-cell--link" onclick="showSignals()" role="button" tabindex="0">'+
+        healthDot(awaiting>0?"amber":"green")+
+        '<div class="health-txt"><div class="health-lbl">Awaiting eyes</div>'+
+        '<div class="health-val">'+awaiting+'</div>'+
+        '<div class="health-sub">'+(d.awaiting.new||0)+' new · '+(d.awaiting.reviewing||0)+' reviewing &rsaquo;</div>'+
+        '</div></div>'+
+      healthCell(null,"Watchlist",(d.coverage.active||0)+"/"+(d.coverage.total||0),"active companies");
+    var el=document.getElementById("health-strip");
+    el.innerHTML=html;
+    el.classList.remove("hidden");
+  }catch(_){ /* silent — the strip is a nicety, never blocks the dashboard */ }
+}
+
+function showLoadError(msg){
+  document.getElementById("tiles").innerHTML="";
+  document.getElementById("dash-sub").textContent="Couldn't load your pipeline.";
+  document.getElementById("today").innerHTML='<div style="padding:16px" class="empty">'+esc(msg)+'</div>';
+  document.getElementById("list").innerHTML="";
+}
+
+var STAGE_ORDER = ["Saved","Tailoring","Ready to apply","Applied","Screening","Interviewing","Offer","Closed"];
+var STAGE_CLASS = {Saved:"st-saved",Tailoring:"st-tailoring","Ready to apply":"st-ready",Applied:"st-applied",Screening:"st-screening",Interviewing:"st-interviewing",Offer:"st-offer",Closed:"st-closed"};
+function esc(s){ return (s||"").replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];}); }
+
+/* ============================================================
+   TINY SANITIZED MARKDOWN — no library. Handles exactly: **bold**,
+   "- "/"* " bullets, blank-line paragraphs, and single line breaks.
+   A whole line that is just **Label** (or an ALL-CAPS "LABEL:" line, the
+   older dossier format) renders as a header-in-miniature. Everything is
+   esc()'d FIRST, so the ONLY HTML that reaches the DOM is the tags we add.
+   ============================================================ */
+function mdInline(s){
+  return esc(s).replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>");
+}
+function mdToHtml(text){
+  var lines=(text||"").replace(/\r\n?/g,"\n").split("\n");
+  var out="",list=null,para=[];
+  function flushPara(){ if(para.length){ out+='<p class="md-p">'+para.join("<br>")+'</p>'; para=[]; } }
+  function flushList(){ if(list!==null){ out+='<ul class="md-ul">'+list+'</ul>'; list=null; } }
+  function flushAll(){ flushList(); flushPara(); }
+  for(var i=0;i<lines.length;i++){
+    var line=lines[i].trim();
+    if(line===""){ flushAll(); continue; }
+    var mb=line.match(/^[-*]\s+(.*)$/);                        // "- " / "* " bullet
+    if(mb){ flushPara(); list=(list||"")+'<li>'+mdInline(mb[1])+'</li>'; continue; }
+    var mh=line.match(/^\*\*(.+?):?\*\*:?$/);                  // whole line bold -> header
+    if(mh){ flushAll(); var lbl=mh[1].trim(); out+='<div class="md-h'+(/\b(RISK|WATCH)\b/i.test(lbl)?" md-h--flag":"")+'">'+mdInline(lbl)+'</div>'; continue; }
+    var mc=line.match(/^([A-Z][A-Z0-9 &'\-\/]{1,38}[A-Z0-9])\s*(\([^)]*\))?\s*:\s*(.*)$/); // ALL-CAPS "LABEL:" (legacy)
+    if(mc){ flushAll(); var flag=/\b(RISK|WATCH)\b/i.test(mc[1]+" "+(mc[2]||"")); out+='<div class="md-h'+(flag?" md-h--flag":"")+'">'+esc(mc[1].trim())+(mc[2]?' <span class="md-h-qual">'+esc(mc[2].trim())+'</span>':"")+'</div>'; if(mc[3]&&mc[3].trim()) para.push(mdInline(mc[3].trim())); continue; }
+    para.push(mdInline(line));                                 // ordinary line
+  }
+  flushAll();
+  return out||('<p class="md-p">'+mdInline((text||"").trim())+'</p>');
+}
+function isClosed(j){ return j.stage==="Closed"; }
+function hasPrep(j){ return j.prep && (j.prep.background||j.prep.edge||j.prep.questions||j.prep.likely); }
+function daysUntil(d){ if(!d) return null; var ms=new Date(d+"T00:00:00")-new Date(new Date().toDateString()); return Math.round(ms/86400000); }
+function whenLabel(d){
+  var n=daysUntil(d);
+  if(n===null) return {t:"—",cls:"later"};
+  if(n<0) return {t:Math.abs(n)+"d late",cls:"over"};
+  if(n===0) return {t:"Today",cls:"soon"};
+  if(n<=3) return {t:"In "+n+"d",cls:"soon"};
+  return {t:new Date(d+"T00:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric"}),cls:"later"};
+}
+
+function renderDashboard(){
+  var jobs=getJobs();
+  var active=jobs.filter(function(j){return !isClosed(j);});
+  var showClosed=document.getElementById("closedToggle").classList.contains("on");
+
+  document.getElementById("dash-sub").textContent=active.length+" active opportunities · "+jobs.filter(isClosed).length+" closed";
+
+  var counts={};
+  STAGE_ORDER.forEach(function(s){counts[s]=jobs.filter(function(j){return j.stage===s;}).length;});
+  var inProcess=active.filter(function(j){return ["Applied","Screening","Interviewing","Offer"].indexOf(j.stage)>=0;}).length;
+  var needPrep=active.filter(function(j){return !hasPrep(j);}).length;
+  document.getElementById("tiles").innerHTML=
+    tile("Active",active.length)+tile("In process",inProcess)+
+    tile("Interviewing",counts["Interviewing"]+counts["Screening"])+tile("Need prep",needPrep);
+
+  var na=active.filter(function(j){return j.nextAction;})
+    .sort(function(a,b){return (a.nextActionDate||"9999").localeCompare(b.nextActionDate||"9999");});
+  document.getElementById("today").innerHTML = na.length ? na.map(function(j){
+    return '<div class="na" onclick="openDetail(\''+j.id+'\')">'+
+      monogram(j.company)+
+      '<div class="body"><div class="co">'+esc(j.company)+'</div><div class="act">'+esc(j.nextAction)+'</div></div>'+
+      linkIcon(j)+
+      '<div class="chev">&rsaquo;</div></div>';
+  }).join("") : '<div style="padding:16px" class="empty">No next actions set yet.</div>';
+
+  var rows=(showClosed?jobs:active).slice().sort(function(a,b){
+    var d=STAGE_ORDER.indexOf(a.stage)-STAGE_ORDER.indexOf(b.stage);
+    return d!==0?d:(b.fit||0)-(a.fit||0);
+  });
+  document.getElementById("list").innerHTML=rows.map(oppRow).join("");
+  syncExpandedPanel();
+}
+function tile(k,v){ return '<div class="card kpi"><div class="lbl">'+k+'</div><div class="num">'+v+'</div></div>'; }
+
+/* ============================================================
+   OPPORTUNITY ROW — EXPAND IN PLACE
+   A row is a summary; the panel below it is the decision brief. Clicking a
+   row expands it in place (one at a time) so a decision can be made without
+   navigating away and losing your position in the queue.
+
+   The three rules this panel exists to enforce:
+     1. NEVER RENDER SILENCE — an empty field says what its emptiness means.
+        Blank space reads as "nothing to see here", which is the exact bug
+        this build fixes.
+     2. COMP CARRIES ITS PROVENANCE — a guessed number must never look like a
+        posted one (see compHtml below).
+     3. THE FIT SCORE IS NEVER MORE THAN ONE CLICK FROM ITS FIT READ — the badge
+        is a summary of the narrative, not evidence on its own, so the panel
+        leads with Fit Read and carries the badge in that same heading.
+
+   READ-ONLY except for the two writes that already existed: Pursue and Close.
+   No new write operations are introduced here.
+   ============================================================ */
+
+var EXPANDED_ID=null;      // the one row currently expanded (null = none)
+var EXPAND_ANIMATE=false;  // true for the render that opens a panel, so it transitions
+
+/* One Opportunities row, plus its brief when this is the expanded one. */
+function oppRow(j){
+  var open=(EXPANDED_ID===j.id);
+  return '<div class="opp-group'+(open?" is-expanded":"")+'">'+
+    '<div class="row" id="opp-row-'+j.id+'" role="button" tabindex="0"'+
+      ' aria-expanded="'+(open?"true":"false")+'" aria-controls="opp-panel-'+j.id+'"'+
+      ' onclick="toggleExpand(\''+j.id+'\')" onkeydown="oppRowKey(event,\''+j.id+'\')">'+
+      monogram(j.company)+
+      '<div class="row-main"><div class="co">'+esc(j.company)+'</div><div class="role">'+esc(j.role)+'</div></div>'+
+      '<div class="meta">'+
+        '<span class="meta-comp" title="'+esc(j.comp||"")+'">'+(compHtml(j.comp)||"&mdash;")+'</span>'+
+        '<span title="'+esc(j.workMode||"")+'">'+esc(j.workMode||"")+'</span>'+
+      '</div>'+
+      '<div class="right">'+
+        pursueToggle(j,"row")+
+        closeToggle(j,"row")+
+        (j.fit?'<span class="fit"><span class="dot"></span>'+j.fit+'/5</span>':'')+
+        stageBadge(j)+
+        oppRowLink(j)+
+        '<span class="opp-caret" aria-hidden="true">&rsaquo;</span>'+
+      '</div>'+
+    '</div>'+
+    (open?oppPanel(j):"")+
+  '</div>';
+}
+
+/* Enter / Space open the row, the same as a click. Space would otherwise scroll. */
+function oppRowKey(e,id){
+  if(e.key==="Enter"||e.key===" "||e.key==="Spacebar"){ e.preventDefault(); toggleExpand(id); }
+}
+
+/* Expand one row (collapsing whatever was open), or collapse the open one. */
+function toggleExpand(id){
+  if(EXPANDED_ID===id){ collapseExpanded(); return; }
+  EXPANDED_ID=id;
+  EXPAND_ANIMATE=true;
+  renderKeepingPlace(id);
+}
+
+/* Collapse with the same quiet animation, then re-render once it has finished. */
+function collapseExpanded(){
+  var id=EXPANDED_ID;
+  if(!id) return;
+  EXPANDED_ID=null;
+  var panel=document.getElementById("opp-panel-"+id);
+  var row=document.getElementById("opp-row-"+id);
+  if(row) row.setAttribute("aria-expanded","false");
+  if(!panel){ renderDashboard(); return; }
+  panel.classList.remove("is-open");
+  setTimeout(function(){ if(EXPANDED_ID===null) renderDashboard(); }, 240);
+}
+
+/* Re-render the board WITHOUT losing your place: a panel opening or closing above
+   the row you clicked would otherwise slide it up or down the viewport. We pin the
+   clicked row to the same screen position it had before the re-render. */
+function renderKeepingPlace(anchorId){
+  var el=document.getElementById("opp-row-"+anchorId);
+  var before=el?el.getBoundingClientRect().top:null;
+  renderDashboard();
+  if(before===null) return;
+  var after=document.getElementById("opp-row-"+anchorId);
+  if(!after) return;
+  var delta=after.getBoundingClientRect().top-before;
+  if(delta) window.scrollBy(0,delta);
+}
+
+/* Run after every board render. The panel markup is emitted already-open on an
+   ordinary re-render (a Pursue tick, say) so state refreshes don't replay the
+   animation; only a fresh expand gets the class added on the next frame, which
+   is what makes it transition. */
+function syncExpandedPanel(){
+  if(!EXPANDED_ID) return;
+  var panel=document.getElementById("opp-panel-"+EXPANDED_ID);
+  if(!panel){ EXPANDED_ID=null; return; }   // the row left the list (closed, or filtered out)
+  if(!EXPAND_ANIMATE){ initTimeline(panel); return; }  // already open — measure now
+  EXPAND_ANIMATE=false;
+  requestAnimationFrame(function(){
+    var p=EXPANDED_ID?document.getElementById("opp-panel-"+EXPANDED_ID):null;
+    if(p) p.classList.add("is-open");
+    // The History timeline can only be measured once the panel has finished
+    // opening; until then grid-template-rows:0fr makes everything zero-height.
+    setTimeout(function(){
+      var q=EXPANDED_ID?document.getElementById("opp-panel-"+EXPANDED_ID):null;
+      if(q) initTimeline(q);
+    }, 260);
+  });
+}
+
+/* ---- RULE 2: comp provenance ----------------------------------------------
+   Comp values arrive prefixed "✓" (posted by the employer, verified) or "~"
+   (estimated). That prefix is the difference between a fact and a guess, so it
+   is preserved and styled, never stripped: "✓" reads in normal ink, "~ Est."
+   in muted text. A value with neither prefix is rendered as-is and claims
+   nothing. "Est." is only added when the value doesn't already say it, so
+   "~ Est. $200K–$300K TC" never becomes "~ Est. Est. …". */
+function compParts(raw){
+  var t=(raw||"").trim();
+  if(!t) return null;
+  if(t.charAt(0)==="✓") return {kind:"posted", mark:"✓", text:t.slice(1).trim()};
+  if(t.charAt(0)==="~"){
+    var rest=t.slice(1).trim();
+    if(!/^est/i.test(rest)) rest="Est. "+rest;
+    return {kind:"est", mark:"~", text:rest};
+  }
+  return {kind:"plain", mark:"", text:t};
+}
+function compHtml(raw){
+  var c=compParts(raw);
+  if(!c) return "";
+  if(c.kind==="plain") return '<span class="comp">'+esc(c.text)+'</span>';
+  var tip=c.kind==="posted"?"Posted by the employer — verified":"Estimated — not posted by the employer";
+  return '<span class="comp comp--'+c.kind+'" title="'+esc(tip)+'">'+
+    '<span class="comp-mark" aria-hidden="true">'+c.mark+'</span>'+esc(c.text)+'</span>';
+}
+
+/* ---- RULE 1: an empty field states what its emptiness means ---------------- */
+function oppEmpty(msg){ return '<p class="opp-empty">'+esc(msg)+'</p>'; }
+
+function oppSection(title,bodyHtml,tail){
+  return '<section class="opp-sec"><h4 class="opp-sec-h">'+esc(title)+(tail||"")+'</h4>'+bodyHtml+'</section>';
+}
+
+/* Collapsed-row link affordance. Apply Link and Link are different things, so
+   they must NOT look identical on the row — otherwise the board shows the same
+   mark for "you can apply from here" and "there's only a posting to read", which
+   is the row telling you the opposite of what the data says. A resolved apply
+   path gets a copper "Apply" chip; a posting-only row gets the quiet muted icon.
+   Text and shape carry the distinction, not colour alone.
+   With neither field set the row shows nothing and the expanded brief states
+   "No link captured — needs verification." — marking every unresolved row on the
+   board itself would be noise on the one surface that has to stay scannable. */
+function oppRowLink(j){
+  var apply=safeUrl(j.applyLink);
+  if(apply) return '<a class="row-apply" href="'+esc(apply)+'" target="_blank" rel="noopener noreferrer" title="Apply — direct employer/ATS link" onclick="event.stopPropagation()">Apply <span aria-hidden="true">&rarr;</span></a>';
+  var posting=safeUrl(j.link);
+  if(posting) return '<a class="ext-link ext-link--posting" href="'+esc(posting)+'" target="_blank" rel="noopener noreferrer" title="Open the posting — no direct apply link resolved yet" aria-label="Open the posting" onclick="event.stopPropagation()">'+EXT_ICON+'</a>';
+  return "";
+}
+
+function oppPanel(j){
+  return '<div class="opp-panel'+(EXPAND_ANIMATE?"":" is-open")+'" id="opp-panel-'+j.id+'">'+
+    '<div class="opp-panel-in">'+
+      oppFitRead(j)+
+      oppEdge(j)+
+      oppBackground(j)+
+      oppFacts(j)+
+      oppLinks(j)+
+      oppNotes(j)+
+      oppActions(j)+
+    '</div>'+
+  '</div>';
+}
+
+/* RULE 3 — the score and the narrative that produced it share one heading. */
+function oppFitRead(j){
+  var badge=j.fit?'<span class="opp-fit" title="Fit — tool-assessed"><span class="dot"></span>'+j.fit+'/5</span>':'';
+  var body=(j.fitRead&&j.fitRead.trim())
+    ? '<div class="md-scope opp-md opp-lead">'+mdToHtml(j.fitRead)+'</div>'
+    : oppEmpty("No fit read yet — nothing here explains this score.");
+  return oppSection("Fit read", body, badge);
+}
+
+function oppEdge(j){
+  var t=(j.prep&&j.prep.edge||"").trim();
+  return oppSection("Role shape, angle, watch-outs",
+    t?'<div class="md-scope opp-md">'+mdToHtml(t)+'</div>':oppEmpty("No role detail yet."));
+}
+
+/* Collapsed behind a toggle when there IS a dossier; when there isn't, the
+   emptiness is stated in the open — hiding "Not yet enriched." behind a closed
+   toggle would be exactly the silence this panel exists to break. */
+function oppBackground(j){
+  var t=(j.prep&&j.prep.background||"").trim();
+  if(!t) return oppSection("Company background", oppEmpty("Not yet enriched."));
+  return '<details class="opp-details">'+
+    '<summary><span class="opp-sec-h">Company background</span><span class="opp-caret opp-caret--sm" aria-hidden="true">&rsaquo;</span></summary>'+
+    '<div class="md-scope opp-md opp-details-body">'+mdToHtml(t)+'</div>'+
+  '</details>';
+}
+
+function oppFacts(j){
+  function fact(k,v){ return '<div class="opp-fact"><dt>'+esc(k)+'</dt><dd>'+v+'</dd></div>'; }
+  function plain(v,fallback){
+    var t=(v||"").trim();
+    return t?esc(t):'<span class="opp-empty-inline">'+esc(fallback)+'</span>';
+  }
+  var comp=compHtml(j.comp)||'<span class="opp-empty-inline">No comp captured.</span>';
+  var logged=todayLoggedLabel(j);
+  return '<dl class="opp-facts">'+
+    fact("Comp",comp)+
+    fact("Work mode",plain(j.workMode,"Not stated."))+
+    fact("Lane",plain(j.lane,"Unassigned."))+
+    fact("Logged",logged?esc(logged):'<span class="opp-empty-inline">Not recorded.</span>')+
+  '</dl>';
+}
+
+/* Apply Link and Link are different things and stay visually distinct: the apply
+   path is the copper button, the posting is a quiet secondary link. With neither,
+   say so — a missing apply URL is a real state that needs verification. */
+function oppLinks(j){
+  var L=jobLinks(j);
+  if(!L.apply && !L.posting) return '<div class="opp-links">'+oppEmpty(NO_LINK_MSG)+'</div>';
+  return '<div class="opp-links">'+
+    (L.apply   ? applyBtn(L.apply,"opp-apply") : "")+
+    (L.posting ? postingBtn(L.posting) : "")+
+    (L.apply   ? "" : '<span class="opp-empty-inline">'+esc(NO_APPLY_MSG)+'</span>')+
+  '</div>';
+}
+
+function oppNotes(j){
+  var t=(j.notes||"").trim();
+  /* DISPLAY-ONLY, same renderer as the detail view's Activity log. Tighter
+     settings here: only the 3 newest entries show and none opens expanded, so
+     a long provenance trail stays subordinate to the decision buttons below. */
+  return '<section class="opp-notes">'+
+    '<h5 class="opp-notes-h">History</h5>'+
+    (t?'<div class="opp-notes-body tl-compact">'+
+         renderTimeline(t,{collapseAfter:3,expandNewest:false})+'</div>'
+      :'<p class="opp-empty opp-empty--sm">No history logged yet.</p>')+
+  '</section>';
+}
+
+/* The same two writes that already exist on the row, repeated at the foot of the
+   panel so a decision never means scrolling back up. No new write path. */
+function oppActions(j){
+  var closed=(j.stage==="Closed");
+  var pursuing=!!j.pursue;
+  var close=closed
+    ? '<button type="button" class="opp-btn opp-btn--close" onclick="event.stopPropagation();openReopenDialog(\''+j.id+'\',false)">Reopen</button>'
+    : '<button type="button" class="opp-btn opp-btn--close" onclick="event.stopPropagation();openCloseDialog(\''+j.id+'\')">Close</button>';
+  return '<div class="opp-actions">'+
+    '<button type="button" class="opp-detail-link" onclick="event.stopPropagation();openDetail(\''+j.id+'\')">Open full detail <span aria-hidden="true">&rarr;</span></button>'+
+    '<span class="edit-status" id="opp-status-'+j.id+'"></span>'+
+    close+
+    '<button type="button" class="opp-btn opp-btn--pursue'+(pursuing?" is-on":"")+'"'+
+      ' onclick="event.stopPropagation();togglePursue(\''+j.id+'\','+(pursuing?"false":"true")+',\'opp-status-'+j.id+'\')">'+
+      (pursuing?"Pursuing ✓":"Pursue")+'</button>'+
+  '</div>';
+}
+
+/* ---- Display-only: company-initial monogram avatar ----
+   Same company always maps to the same palette tint (stable hash),
+   so the badge colour is consistent across Today and Opportunities. */
+var MONO_TINTS=["#2F4A3A","#6F8796","#8B4F55","#A66A4C"];
+function monoTint(name){
+  var s=name||"",h=0;
+  for(var i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))>>>0; }
+  return MONO_TINTS[h%MONO_TINTS.length];
+}
+function monogram(name){
+  var s=(name||"").trim();
+  var ch=s?esc(s.charAt(0).toUpperCase()):"·";
+  return '<span class="mono-badge" style="background:'+monoTint(s)+'" aria-hidden="true">'+ch+'</span>';
+}
+
+/* ---- Display-only: link to the Airtable posting URL (no writes) ---- */
+var EXT_ICON = '<svg class="ext-ico" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg>';
+function safeUrl(u){
+  u=(u||"").trim();
+  if(!u) return "";
+  if(/^https?:\/\//i.test(u)) return u;                 // http(s) → use as-is
+  if(/^[a-z][a-z0-9+.\-]*:/i.test(u)) return "";        // other scheme (javascript:, data:, mailto:…) → reject
+  return "https://"+u;                                   // schemeless → assume https
+}
+/* Today's next-actions strip. This one always opens a POSTING, so it carries the
+   muted posting treatment — copper is reserved for an apply path app-wide. */
+function linkIcon(j){
+  var u=safeUrl(j.link); if(!u) return "";
+  return '<a class="ext-link ext-link--posting" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" title="Open posting" aria-label="Open posting" onclick="event.stopPropagation()">'+EXT_ICON+'</a>';
+}
+/* ---- Apply Link vs Link — ONE source of truth, shared by the board panel and
+   the detail view so the two can never drift or disagree about what is missing.
+   Apply Link is the employer/ATS apply path; Link is wherever the posting was
+   seen. Different things, kept visually distinct, and neither falls back to the
+   other. Replaces the old linkButton(), which read ONLY j.link and returned an
+   empty string when it was blank — so a row with a live Apply Link but no
+   posting URL (GitLab) rendered no button at all, and a row with neither
+   (Dynata) rendered nothing to say so. That was the same silence bug. */
+var NO_LINK_MSG = "No link captured — needs verification.";
+var NO_APPLY_MSG = "No direct apply link resolved yet.";
+function jobLinks(j){ return { apply: safeUrl(j.applyLink), posting: safeUrl(j.link) }; }
+function applyBtn(u, cls){
+  return '<a class="'+cls+'" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Apply <span aria-hidden="true">&rarr;</span></a>';
+}
+function postingBtn(u){
+  return '<a class="opp-posting" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">View the posting '+EXT_ICON+'</a>';
+}
+
+/* ---- Pursue toggle (writes via update-job; queues the job for enrichment) ----
+   The record's pursue value in JOBS is the single source of truth; the row and
+   the detail card both render from it, so they always match. */
+var CURRENT_DETAIL=null;
+function pursueToggle(j, place){
+  var on=!!j.pursue;
+  var tip=on?"Pursuing — queued for enrichment":"Tick to pursue (queue for enrichment)";
+  return '<label class="pursue'+(on?" on":"")+'" title="'+tip+'" onclick="event.stopPropagation()">'+
+    '<input type="checkbox"'+(on?" checked":"")+' onchange="togglePursue(\''+j.id+'\',this.checked)" aria-label="Pursue '+esc(j.company)+'"> Pursue</label>';
+}
+function pursueHint(j){
+  if(!j.pursue) return "";
+  var hasBg=!!(j.prep&&j.prep.background&&j.prep.background.trim());
+  return '<span class="pursue-hint">'+(hasBg?"Pursue on · dossier already built":"Queued for enrichment")+'</span>';
+}
+function syncPursueUI(id){
+  renderDashboard();  // rows re-render from JOBS state
+  var dv=document.getElementById("view-detail");
+  if(dv && !dv.classList.contains("hidden") && CURRENT_DETAIL){ rerenderDetail(CURRENT_DETAIL); }
+}
+async function togglePursue(id, want, statusId){
+  var job=getJobs().filter(function(x){return x.id===id;})[0];
+  if(!job) return;
+  // Which status line gets the feedback. Defaults to the detail card's; the
+  // expanded row passes its own, so a Pursue from the board reports on the board.
+  statusId=statusId||"pursue-status";
+  if(want && job.stage==="Closed"){
+    // Can't pursue a closed role — prompt to reopen (and turn Pursue on) instead.
+    openReopenDialog(id, true);
+    syncStatusUI();   // revert the optimistic Pursue tick until confirmed
+    return;
+  }
+  var prev=!!job.pursue;
+  job.pursue=want;                 // optimistic update of the single source of truth
+  syncPursueUI(id);
+  try{
+    var data=await postUpdate({id:id, pursue:want});
+    job.pursue=!!data.pursue;       // reconcile with the server's confirmed value
+    syncPursueUI(id);
+    flashStatus(statusId, want?"Pursue on ✓":"Pursue off ✓", "ok");
+  }catch(err){
+    job.pursue=prev;                // revert BOTH row + card together
+    syncPursueUI(id);
+    flashStatus(statusId,"Couldn't update Pursue: "+err.message,"err");
+  }
+}
+
+var FIT_HELP='<b>Fit — tool-assessed</b><br>5 Bullseye · 4 Strong · 3 Plausible · 2 Weak · 1 Poor';
+var EXC_HELP='<b>Excitement — self-rated</b><br>5 Thrilled · 4 Energized · 3 Interested · 2 Lukewarm · 1 Flat';
+var NEXT_DEFAULTS={
+  "Saved":"Verify fit (comp, remote, lane); decide whether to pursue.",
+  "Tailoring":"Finish the tailored resume + cover, then apply.",
+  "Ready to apply":"Apply to the posting.",
+  "Applied":"Await a response; follow up in ~7 days if quiet.",
+  "Screening":"Prep for the next round; confirm logistics.",
+  "Interviewing":"Send a thank-you; prep the next interview.",
+  "Offer":"Evaluate the offer; negotiate; decide."
+};
+
+function openDetail(id, noScroll){
+  var j=getJobs().filter(function(x){return x.id===id;})[0];
+  if(!j) return;
+  CURRENT_DETAIL=id;
+  var p=j.prep||{};
+  document.getElementById("view-detail").innerHTML=
+    '<button class="back" onclick="showDashboard()">&lsaquo; Back to pipeline</button>'+
+    '<div class="detail-head"><div class="detail-head-text">'+
+      '<h1>'+esc(j.role)+'</h1>'+
+      '<div class="sub"><b>'+esc(j.company)+'</b></div>'+
+    '</div></div>'+
+    glance(j)+
+    nextStepBand(j)+
+    prepDossier(p)+
+    statusActivity(j);
+  showView("detail");
+  // Timeline entries that already fit lose their "Show more" button. This must
+  // run AFTER showView — while the view is still hidden every element measures
+  // zero height, which would strip the clamp off every entry.
+  initTimeline(document.getElementById("view-detail"));
+  if(!noScroll) window.scrollTo(0,0);
+}
+
+function helpDot(kind){
+  var pop=(kind==="fit")?FIT_HELP:EXC_HELP;
+  return '<span class="help" role="button" tabindex="0" aria-label="Score legend">?<span class="help-pop">'+pop+'</span></span>';
+}
+function stageBadge(j){
+  return '<span class="pill-s '+(STAGE_CLASS[j.stage]||"s-slate")+'">'+esc(j.stage||"—")+'</span>';
+}
+function excitementControl(j){
+  var cur=j.excitement||0, out='<span class="pips">';
+  for(var n=1;n<=5;n++){
+    out+='<button type="button" class="pip'+(n<=cur?" on":"")+'" aria-label="Set excitement to '+n+'" onclick="setExcitement(\''+j.id+'\','+n+')">'+n+'</button>';
+  }
+  return out+'</span>';
+}
+function glance(j){
+  return '<div class="facts" style="margin:16px 0 20px">'+
+    stageBadge(j)+
+    '<span class="fact">Fit'+helpDot("fit")+' <b>'+(j.fit?esc(j.fit+"/5"):"—")+'</b></span>'+
+    '<span class="fact">Excitement'+helpDot("exc")+' '+excitementControl(j)+'</span>'+
+    '<span class="fact" title="'+esc(j.comp||"")+'"><b>Comp</b> <span class="fval">'+(compHtml(j.comp)||"—")+'</span></span>'+
+    '<span class="fact" title="'+esc(j.workMode||"")+'"><b>Work mode</b> <span class="fval">'+esc(j.workMode||"—")+'</span></span>'+
+    '<span class="fact" title="'+esc(j.source||"")+'"><b>Source</b> <span class="fval">'+esc(j.source||"—")+'</span></span>'+
+    '<button type="button" class="btn-ghost" onclick="showComp()">Check comp &rarr;</button>'+
+    detailLinks(j)+
+  '</div>';
+}
+
+/* Apply / posting on the detail view, sitting with "Check comp →" in the facts
+   strip. Same rule as the board panel: the apply path is the copper button, the
+   posting is a quiet link, and with neither we state what the emptiness means
+   rather than rendering nothing at all. */
+function detailLinks(j){
+  var L=jobLinks(j);
+  if(!L.apply && !L.posting) return '<span class="link-missing">'+esc(NO_LINK_MSG)+'</span>';
+  return (L.apply   ? applyBtn(L.apply,"opp-apply opp-apply--sm") : "")+
+         (L.posting ? postingBtn(L.posting) : "")+
+         (L.apply   ? "" : '<span class="link-missing">'+esc(NO_APPLY_MSG)+'</span>');
+}
+function nextStepBand(j){
+  var val=(j.nextAction||"").trim();
+  var isDefault=!val;
+  var shown=val||NEXT_DEFAULTS[j.stage]||"No suggested step for this stage.";
+  return '<section class="callout">'+
+    '<div class="callout-head"><span class="callout__label">Recommended next step</span>'+
+      '<button class="link-btn" type="button" onclick="toggleNextEdit()">Edit</button></div>'+
+    '<p id="nextstep-view"'+(isDefault?' class="ns-default"':'')+'>'+esc(shown)+
+      (isDefault?'<span class="ns-tag">Suggested from stage — not saved until you edit</span>':"")+'</p>'+
+    '<div id="nextstep-edit" class="hidden">'+
+      '<textarea id="nextstep-input" rows="2" placeholder="'+esc(NEXT_DEFAULTS[j.stage]||"Describe the next action…")+'">'+esc(val)+'</textarea>'+
+      '<div class="edit-actions">'+
+        '<button class="btn-green" id="nextstep-save" onclick="saveNextAction(\''+j.id+'\')">Save next action</button>'+
+        '<button class="link-btn" type="button" onclick="toggleNextEdit()">Cancel</button>'+
+        '<span class="edit-status" id="nextstep-status"></span>'+
+      '</div>'+
+    '</div>'+
+  '</section>';
+}
+function toggleNextEdit(){
+  var v=document.getElementById("nextstep-view"), e=document.getElementById("nextstep-edit");
+  if(v) v.classList.toggle("hidden");
+  if(e){ e.classList.toggle("hidden"); if(!e.classList.contains("hidden")){ var i=document.getElementById("nextstep-input"); if(i) i.focus(); } }
+}
+
+/* ============================================================
+   DOSSIER PARSER — display-only. Turns free-form prep text into
+   structured blocks WITHOUT altering the words:
+   - A field begins at any line whose start is an ALL-CAPS label
+     (uppercase letters / spaces / & / - / '), optionally followed
+     by a lowercase parenthetical qualifier, then a colon.
+   - Everything until the next such label is that field's value.
+   - Labels containing RISK or WATCH are flagged.
+   - CONTACTS values are split into one item per person (best-effort).
+   - Questions render as diamond bullets (lead phrase bolded).
+   - FALLBACK: text with no matching label renders as clean prose
+     (whitespace preserved) — content is never dropped or reordered.
+   ============================================================ */
+function parseSections(text){
+  var lines=(text||"").replace(/\r\n?/g,"\n").split("\n");
+  var labelRe=/^\s*([A-Z][A-Z0-9 &'\-]*[A-Z0-9])\s*(\([^)]*\))?\s*:\s*(.*)$/;
+  var segs=[], cur=null, prose=[];
+  function flushProse(){ if(prose.length){ var t=prose.join("\n").replace(/\s+$/,""); if(t.trim()) segs.push({type:"prose",text:t}); prose=[]; } }
+  for(var i=0;i<lines.length;i++){
+    var m=lines[i].match(labelRe);
+    if(m && /[A-Z].*[A-Z]/.test(m[1]) && m[1].length<=40){
+      flushProse();
+      if(cur) segs.push(cur);
+      cur={type:"label", label:m[1].trim(), qual:(m[2]||"").trim(), value:(m[3]||"")};
+    } else if(cur){
+      cur.value += "\n"+lines[i];
+    } else {
+      prose.push(lines[i]);
+    }
+  }
+  if(cur) segs.push(cur);
+  flushProse();
+  segs.forEach(function(s){ if(s.type==="label") s.value=(s.value||"").trim(); });
+  return segs;
+}
+function isFlagLabel(s){ return /\b(RISK|WATCH)/i.test(s); }
+function proseBlock(text){ return '<p class="prose" style="white-space:pre-wrap">'+esc(text)+'</p>'; }
+function contactsList(value){
+  var parts=value.split(/\.\s+(?=[A-Z])/).map(function(s){return s.trim();}).filter(Boolean);
+  var ok=parts.length>1 && parts.every(function(p){return / - | — |: /.test(p);});
+  if(!ok) return '<p style="white-space:pre-wrap">'+esc(value)+'</p>';
+  return '<ul class="list-dot">'+parts.map(function(p){return '<li>'+esc(p)+'</li>';}).join("")+'</ul>';
+}
+function renderSections(text){
+  var segs=parseSections(text);
+  var hasLabel=segs.some(function(s){return s.type==="label";});
+  if(!hasLabel) return proseBlock((text||"").trim());
+  var out='<div class="deflist">';
+  segs.forEach(function(s){
+    if(s.type==="prose"){ out+='<div class="deflist__item"><p style="white-space:pre-wrap">'+esc(s.text)+'</p></div>'; return; }
+    var flag=isFlagLabel(s.label+" "+s.qual);
+    var labelHtml=esc(s.label)+(s.qual?' <span style="text-transform:none;color:var(--muted);font-weight:600">'+esc(s.qual)+'</span>':"");
+    var valueHtml="";
+    if(s.value){
+      if(/^CONTACTS\b/.test(s.label)) valueHtml=contactsList(s.value);
+      else if(flag) valueHtml='<div class="flag-note">'+esc(s.value)+'</div>';
+      else valueHtml='<p style="white-space:pre-wrap">'+esc(s.value)+'</p>';
+    }
+    out+='<div class="deflist__item"><span class="deflist__label'+(flag?' deflist__label--flag':'')+'">'+labelHtml+'</span>'+valueHtml+'</div>';
+  });
+  return out+'</div>';
+}
+function renderQuestions(text){
+  var t=(text||"").trim();
+  var isBullets=/^\s*[-•]/m.test(t);
+  if(!isBullets) return proseBlock(t);
+  var items=t.split(/\n/).map(function(l){return l.replace(/^\s*[-•]\s*/,"").trim();}).filter(Boolean);
+  return '<ul class="list-diamond">'+items.map(function(q){
+    var idx=q.indexOf(" - ");
+    if(idx>0) return '<li><b>'+esc(q.slice(0,idx))+'</b>'+esc(q.slice(idx))+'</li>';
+    return '<li>'+esc(q)+'</li>';
+  }).join("")+'</ul>';
+}
+function prepBody(field,kind){
+  var t=(field||"").trim();
+  if(!t) return '<div class="empty">No prep authored yet.</div>';
+  if(kind==="questions") return renderQuestions(t);
+  if(kind==="background"||kind==="edge") return '<div class="md-scope">'+mdToHtml(t)+'</div>';
+  return renderSections(t);
+}
+function prepRow(title,content,kind){
+  var has=!!(content&&content.trim());
+  return '<details class="prep-row"><summary><span class="t">'+esc(title)+'</span>'+(has?"":'<span class="prep-hint">empty</span>')+'</summary><div class="prep-content">'+prepBody(content,kind)+'</div></details>';
+}
+function prepDossier(p){
+  return '<div class="eyebrow">Prep dossier</div>'+
+    '<div class="prep-wrap">'+
+      prepRow("Company Background & History",p.background,"background")+
+      prepRow("Edge Facts",p.edge,"edge")+
+      prepRow("Questions to Ask",p.questions,"questions")+
+      prepRow("Likely Questions & Prep",p.likely,"likely")+
+    '</div>';
+}
+function statusActivity(j){
+  var opts=STAGE_ORDER.map(function(s){return '<option value="'+esc(s)+'"'+(s===j.stage?" selected":"")+'>'+esc(s)+'</option>';}).join("");
+  return '<section class="card edit-card"><h2>Status &amp; activity</h2>'+
+    '<label class="fld" for="edit-stage">Stage</label>'+
+    '<select id="edit-stage" onchange="saveStage(\''+j.id+'\')">'+opts+'</select>'+
+    '<div class="edit-status" id="stage-status"></div>'+
+    '<div class="edit-divider"></div>'+
+    '<label class="fld">Excitement '+helpDot("exc")+'</label>'+
+    '<div class="edit-actions">'+excitementControl(j)+'<span class="edit-status" id="exc-status"></span></div>'+
+    '<div class="edit-divider"></div>'+
+    '<label class="fld">Pursue</label>'+
+    '<div class="edit-actions">'+pursueToggle(j,"card")+pursueHint(j)+'<span class="edit-status" id="pursue-status"></span></div>'+
+    '<div class="edit-divider"></div>'+
+    '<label class="fld">Close</label>'+
+    '<div class="edit-actions">'+closeToggle(j,"card")+'</div>'+
+    '<div class="edit-divider"></div>'+
+    '<label class="fld">Activity log</label>'+
+    /* DISPLAY-ONLY: renderTimeline (public/notes-timeline.js) parses the stored
+       Notes string into dated entries at render time. It never writes, never
+       reorders, and never alters a character of what Airtable holds. */
+    (j.notes?renderTimeline(j.notes):'<div class="empty">No notes yet.</div>')+
+    '<label class="fld" for="edit-note" style="margin-top:16px">Add a dated note</label>'+
+    '<textarea id="edit-note" rows="2" placeholder="What happened? A timestamped line (Arizona time) is appended below — nothing is overwritten."></textarea>'+
+    '<div class="edit-actions">'+
+      '<button class="btn-green" id="edit-note-btn" onclick="addNote(\''+j.id+'\')">Add dated note</button>'+
+      '<span class="edit-status" id="note-status"></span>'+
+    '</div>'+
+    '<div class="readonly-note">Writes only Stage, Excitement, Pursue, Next Action, and Notes · Fit is read-only · Notes are append-only.</div>'+
+  '</section>';
+}
+
+/* ---- Write handlers (update-job): Stage, Next Action, Excitement, Notes ---- */
+async function postUpdate(payload){
+  var resp=await fetch("/.netlify/functions/update-job",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+  var data=await resp.json();
+  if(!resp.ok||(data&&data.error)){ throw new Error((data&&data.error)||("HTTP "+resp.status)); }
+  return data;
+}
+function flashStatus(id,msg,cls){ var el=document.getElementById(id); if(el){ el.className="edit-status"+(cls?" "+cls:""); el.textContent=msg; } }
+
+/* Re-render the detail in place, preserving scroll position and which prep rows are open. */
+function rerenderDetail(id){
+  var open=[], rows=document.querySelectorAll("#view-detail details.prep-row");
+  for(var i=0;i<rows.length;i++){ if(rows[i].open) open.push(i); }
+  var y=window.scrollY;
+  openDetail(id,true);
+  rows=document.querySelectorAll("#view-detail details.prep-row");
+  for(var k=0;k<rows.length;k++){ if(open.indexOf(k)>=0) rows[k].open=true; }
+  window.scrollTo(0,y);
+}
+
+async function saveStage(id){
+  var sel=document.getElementById("edit-stage"); var stage=sel?sel.value:"";
+  flashStatus("stage-status","Saving…","");
+  try{
+    var data=await postUpdate({id:id,stage:stage});
+    var job=getJobs().filter(function(x){return x.id===id;})[0]; if(job) job.stage=data.stage;
+    renderDashboard(); rerenderDetail(id);
+    flashStatus("stage-status","Saved ✓","ok");
+  }catch(err){ flashStatus("stage-status","Couldn't save: "+err.message,"err"); }
+}
+
+async function setExcitement(id,n){
+  flashStatus("exc-status","Saving…","");
+  try{
+    var data=await postUpdate({id:id,excitement:n});
+    var job=getJobs().filter(function(x){return x.id===id;})[0]; if(job) job.excitement=data.excitement;
+    rerenderDetail(id);
+    flashStatus("exc-status","Saved ✓","ok");
+  }catch(err){ flashStatus("exc-status","Couldn't save: "+err.message,"err"); }
+}
+
+async function saveNextAction(id){
+  var input=document.getElementById("nextstep-input"); var val=input?input.value:"";
+  flashStatus("nextstep-status","Saving…","");
+  try{
+    var data=await postUpdate({id:id,nextAction:val});
+    var job=getJobs().filter(function(x){return x.id===id;})[0]; if(job) job.nextAction=data.nextAction;
+    renderDashboard(); rerenderDetail(id);
+  }catch(err){ flashStatus("nextstep-status","Couldn't save: "+err.message,"err"); }
+}
+
+async function addNote(id){
+  var ta=document.getElementById("edit-note");
+  var text=(ta&&ta.value||"").trim();
+  if(!text){ flashStatus("note-status","Type a note first.","err"); return; }
+  flashStatus("note-status","Adding…","");
+  try{
+    var data=await postUpdate({id:id,noteAppend:text});
+    var job=getJobs().filter(function(x){return x.id===id;})[0]; if(job) job.notes=data.notes;
+    rerenderDetail(id);
+    flashStatus("note-status","Note added ✓","ok");
+  }catch(err){ flashStatus("note-status","Couldn't add note: "+err.message,"err"); }
+}
+
+function showView(v){
+  document.getElementById("view-dashboard").classList.toggle("hidden",v!=="dashboard");
+  document.getElementById("view-detail").classList.toggle("hidden",v!=="detail");
+  document.getElementById("view-comp").classList.add("hidden");
+  document.getElementById("view-settings").classList.add("hidden");
+  document.getElementById("view-signals").classList.add("hidden");
+  document.getElementById("view-today").classList.add("hidden");
+}
+function showDashboard(){ showView("dashboard"); window.scrollTo(0,0); }
+
+/* ============================================================
+   TODAY — the daily triage pass. Every Saved role, newest first,
+   as a card with the two decisions that matter: Pursue or Close.
+   Reads from the SAME JOBS array the dashboard renders from (no
+   second fetch), and writes through the SAME update-job endpoint
+   the detail view uses (no second write path).
+   ============================================================ */
+
+/* Today's date in Arizona time (America/Phoenix, no DST) — matched to the
+   stamp update-job.js writes, so "new today" agrees with the server. */
+function todayIsoAZ(){
+  var parts=new Intl.DateTimeFormat("en-CA",{timeZone:"America/Phoenix",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
+  var p={}; for(var i=0;i<parts.length;i++){ p[parts[i].type]=parts[i].value; }
+  return p.year+"-"+p.month+"-"+p.day;
+}
+function todayIsNew(j){ return !!j.dateFound && j.dateFound===todayIsoAZ(); }
+
+/* Saved only, newest first. Undated rows sort last rather than jumping the queue. */
+function todayJobs(){
+  return getJobs().filter(function(j){ return j.stage==="Saved"; })
+    .slice().sort(function(a,b){
+      var d=(b.dateFound||"").localeCompare(a.dateFound||"");
+      return d!==0 ? d : (b.fit||0)-(a.fit||0);
+    });
+}
+
+/* The logged date — when the mine found this row — as a plain calendar date.
+   dateFound arrives as "YYYY-MM-DD" (sliced from a UTC timestamp), so we anchor it
+   at UTC NOON before formatting in Arizona time. Formatting the bare string would
+   parse as UTC midnight and render as the PREVIOUS day anywhere west of Greenwich;
+   noon leaves no room for the offset to cross a date boundary. The year appears
+   only when it isn't the current one.
+
+   FUTURE — posted date: deliberately not shown. Opportunities has no posted /
+   publication-date field; its only dates (Date Found, Date Applied, Next Action By,
+   Next Action Date) all record OUR activity, not the employer's. A real "Posted"
+   line would first require capturing the date at mine time from the ATS / job-board
+   payload and storing it in a new Airtable field. Until that data is captured there
+   is nothing honest to render here, so nothing is rendered. */
+function todayLoggedLabel(j){
+  if(!j.dateFound) return "";                          // no data — say nothing rather than guess
+  var p=j.dateFound.split("-");
+  var d=new Date(Date.UTC(+p[0], +p[1]-1, +p[2], 12)); // UTC noon → same calendar day in Phoenix
+  var opts={timeZone:"America/Phoenix", month:"short", day:"numeric"};
+  if(p[0]!==todayIsoAZ().slice(0,4)) opts.year="numeric";
+  return "Logged "+new Intl.DateTimeFormat(undefined,opts).format(d);
+}
+
+function todayCard(j){
+  var chips="";
+  if(j.lane)     chips+='<span class="tj-chip">'+esc(j.lane)+'</span>';
+  if(j.workMode) chips+='<span class="tj-chip">'+esc(j.workMode)+'</span>';
+  if(j.comp)     chips+='<span class="tj-chip tj-chip--comp">'+esc(j.comp)+'</span>';
+
+  var u=safeUrl(j.link);
+  var posting=u?'<a class="tj-link" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">View posting '+EXT_ICON+'</a>':'';
+  var logged=todayLoggedLabel(j);
+
+  return '<article class="tj-card" id="tj-'+j.id+'">'+
+    '<div class="tj-head">'+
+      monogram(j.company)+
+      '<div class="tj-title">'+
+        '<div class="tj-co">'+esc(j.company)+
+          (todayIsNew(j)?' <span class="tj-new">New today</span>':'')+'</div>'+
+        '<div class="tj-role">'+esc(j.role)+'</div>'+
+      '</div>'+
+      (j.fit?'<span class="tj-fit" title="Fit — tool-assessed"><span class="dot"></span>'+j.fit+'/5</span>':'')+
+    '</div>'+
+    (chips?'<div class="tj-chips">'+chips+'</div>':'')+
+    (j.fitRead?'<div class="tj-read">'+(renderFitRead(j.fitRead)||mdToHtml(j.fitRead))+'</div>':'')+
+    '<div class="tj-foot">'+
+      posting+
+      '<div class="tj-actions">'+
+        '<span class="edit-status" id="tj-status-'+j.id+'"></span>'+
+        '<button type="button" class="tj-btn tj-btn--close" onclick="todayClose(\''+j.id+'\')">Close</button>'+
+        '<button type="button" class="tj-btn tj-btn--pursue" onclick="todayPursue(\''+j.id+'\')">Pursue</button>'+
+      '</div>'+
+    '</div>'+
+    (logged?'<div class="tj-logged">'+esc(logged)+'</div>':'')+
+  '</article>';
+}
+
+function renderToday(){
+  if(!JOBS_LOADED){
+    document.getElementById("today-body").innerHTML='<div class="empty">Loading today’s jobs…</div>';
+    return;
+  }
+  var rows=todayJobs();
+  var fresh=rows.filter(todayIsNew).length;
+  document.getElementById("today-sub").textContent = rows.length
+    ? rows.length+" saved "+(rows.length===1?"role":"roles")+" to triage"+(fresh?" · "+fresh+" new today":"")
+    : "Nothing left to triage — the queue is clear.";
+  document.getElementById("today-body").innerHTML = rows.length
+    ? rows.map(todayCard).join("")
+    : '<div class="empty">No saved roles waiting. New finds land here as the mine runs.</div>';
+}
+
+function showToday(){
+  showView("today");
+  document.getElementById("view-today").classList.remove("hidden");
+  window.scrollTo(0,0);
+  renderToday();
+}
+function todayBack(){ showView("dashboard"); window.scrollTo(0,0); }
+
+/* Retire a card once its decision is written: confirm, fade, then re-render
+   so the counts and the remaining queue stay honest. */
+function todayRetire(id,msg){
+  flashStatus("tj-status-"+id,msg,"ok");
+  var el=document.getElementById("tj-"+id);
+  if(!el){ renderToday(); return; }
+  el.classList.add("tj-done");
+  setTimeout(renderToday,900);
+}
+function todayBusy(id,on){
+  var el=document.getElementById("tj-"+id);
+  if(el) el.classList.toggle("tj-busy",!!on);
+}
+
+async function todayPursue(id){
+  var job=getJobs().filter(function(x){return x.id===id;})[0];
+  if(!job) return;
+  todayBusy(id,true);
+  flashStatus("tj-status-"+id,"Saving…","");
+  try{
+    var data=await postUpdate({id:id, pursue:true});
+    job.pursue=!!data.pursue;
+    renderDashboard();
+    todayRetire(id,"Pursuing ✓ queued for enrichment");
+  }catch(err){
+    todayBusy(id,false);
+    flashStatus("tj-status-"+id,"Couldn't pursue: "+err.message,"err");
+  }
+}
+
+/* Close uses the same atomic closeReason path as the detail view: Stage→Closed,
+   Pursue→false, Next Action cleared, and an append-only dated note. Nothing is
+   ever deleted — the closed row stays as dedupe memory for the mine. */
+async function todayClose(id){
+  var job=getJobs().filter(function(x){return x.id===id;})[0];
+  if(!job) return;
+  todayBusy(id,true);
+  flashStatus("tj-status-"+id,"Saving…","");
+  try{
+    var data=await postUpdate({id:id, closeReason:"Triaged out on the daily pass"});
+    job.stage=data.stage; job.pursue=!!data.pursue; job.notes=data.notes;
+    job.nextAction=data.nextAction||"";
+    renderDashboard();
+    todayRetire(id,"Closed ✓");
+  }catch(err){
+    todayBusy(id,false);
+    flashStatus("tj-status-"+id,"Couldn't close: "+err.message,"err");
+  }
+}
+
+document.getElementById("closedToggle").addEventListener("click",function(){
+  this.classList.toggle("on");
+  this.textContent=this.classList.contains("on")?"Hide closed":"Show closed";
+  renderDashboard();
+});
+
+/* ============================================================
+   COMP VIEW — client-side math only. No Airtable reads/writes;
+   independent of getJobs()/postUpdate() and the write path.
+   ============================================================ */
+function compNum(id){ var el=document.getElementById(id); var v=parseFloat(el&&el.value); return isFinite(v)?v:0; }
+function compMoney(n){ return "$"+Math.round(n).toLocaleString("en-US"); }
+function compRef(n){ n=Math.round(n); return (n%1000===0)?("$"+(n/1000)+"K"):compMoney(n); }
+
+function showComp(){
+  document.getElementById("view-dashboard").classList.add("hidden");
+  document.getElementById("view-detail").classList.add("hidden");
+  document.getElementById("view-settings").classList.add("hidden");
+  document.getElementById("view-signals").classList.add("hidden");
+  document.getElementById("view-comp").classList.remove("hidden");
+  window.scrollTo(0,0);
+}
+function compBack(){
+  document.getElementById("view-comp").classList.add("hidden");
+  document.getElementById("view-dashboard").classList.remove("hidden");
+  window.scrollTo(0,0);
+}
+
+function computeW2(){
+  var base=compNum("w2_base"), bonus=compNum("w2_bonus"), equity=compNum("w2_equity"),
+      benefits=compNum("w2_benefits"), floor=compNum("w2_floor");
+  var cash=base+bonus;
+  var total=base+bonus+equity+benefits;
+  var gap=cash-floor;
+  document.getElementById("w2_cash").textContent=compMoney(cash);
+  document.getElementById("w2_total").textContent=compMoney(total);
+  var lead = (gap<0)
+    ? ("Cash lands "+compMoney(Math.abs(gap))+" under your "+compRef(floor)+" reference")
+    : ("Cash clears your reference by "+compMoney(gap));
+  var extra="";
+  if(gap<0){
+    if(total>=floor){ extra="Worth noting: total comp of "+compMoney(total)+", including benefits, clears the reference."; }
+    else if(total>=floor-5000){ extra="Worth noting: total comp of "+compMoney(total)+", including benefits, lands close to the reference."; }
+  }
+  document.getElementById("w2_banner").innerHTML =
+    '<div class="lead">'+lead+'</div>'+
+    (extra?'<div class="comp-note" style="margin-top:8px">'+extra+'</div>':"");
+}
+
+function compute1099(){
+  var target=compNum("c_target"), hours=compNum("c_hours"), benefits=compNum("c_benefits"),
+      overhead=compNum("c_overhead"), tax=compNum("c_tax");
+  var required=(target+benefits)*(1+overhead/100)*(1+tax/100);
+  var rateEl=document.getElementById("c_rate");
+  if(hours>0){
+    rateEl.textContent="≈ $"+Math.round(required/hours).toLocaleString("en-US")+"/hr";
+  } else {
+    rateEl.textContent="≈ —/hr";
+  }
+  var naive=Math.round(target/2080);
+  document.getElementById("c_naive").textContent=
+    "Straight "+compMoney(target)+" ÷ 2,080 hrs = ~ $"+naive.toLocaleString("en-US")+"/hr";
+}
+
+/* ============================================================
+   SLICE 4 — Close action (direct write via update-job closeReason).
+   Closing needs no research, so it's a direct write — not a queued flag.
+   ============================================================ */
+function closeToggle(j, place){
+  var on=(j.stage==="Closed");
+  var tip=on?"Closed — untick to reopen to Saved":"Tick to close (a reason is required)";
+  return '<label class="pursue close-toggle'+(on?" on":"")+'" title="'+tip+'" onclick="event.stopPropagation()">'+
+    '<input type="checkbox"'+(on?" checked":"")+' onchange="onCloseCheckbox(\''+j.id+'\',this.checked)" aria-label="Close '+esc(j.company)+'"> Close</label>';
+}
+function syncStatusUI(){
+  renderDashboard();
+  var dv=document.getElementById("view-detail");
+  if(dv && !dv.classList.contains("hidden") && CURRENT_DETAIL){ rerenderDetail(CURRENT_DETAIL); }
+}
+function onCloseCheckbox(id, checked){
+  var job=getJobs().filter(function(x){return x.id===id;})[0]; if(!job) return;
+  if(checked){ openCloseDialog(id); }      // ticking → close (reason required)
+  else { openReopenDialog(id, false); }    // unticking a closed row → reopen confirm
+}
+var CLOSE_REASONS=["Location","Lane mismatch","Comp","Not interested"];
+var SELECTED_REASON="";
+function openCloseDialog(id){
+  var j=getJobs().filter(function(x){return x.id===id;})[0]; if(!j) return;
+  SELECTED_REASON="";
+  var chips=CLOSE_REASONS.map(function(r){return '<button type="button" class="reason-chip" onclick="pickReason(this,\''+esc(r)+'\')">'+esc(r)+'</button>';}).join("");
+  document.getElementById("modal-root").innerHTML=
+    '<div class="modal-overlay" onclick="closeDialogCancel()"></div>'+
+    '<div class="modal-card" role="dialog" aria-modal="true" aria-label="Close opportunity">'+
+      '<h3>Close &ldquo;'+esc(j.company)+'&rdquo;?</h3>'+
+      '<div class="modal-sub">'+esc(j.role)+'</div>'+
+      '<div class="reason-label">Reason (required)</div>'+
+      '<div class="reason-chips">'+chips+'</div>'+
+      '<input type="text" id="close-reason-text" class="reason-text" placeholder="…or type a reason" oninput="onReasonText()">'+
+      '<div class="modal-actions">'+
+        '<button type="button" class="btn-close-confirm" id="close-confirm" disabled onclick="confirmClose(\''+j.id+'\')">Close opportunity</button>'+
+        '<button type="button" class="link-btn" onclick="closeDialogCancel()">Cancel</button>'+
+        '<span class="edit-status" id="close-status"></span>'+
+      '</div>'+
+      '<div class="readonly-note">Sets Stage → Closed, Pursue off, clears the next action, appends a dated note. Not a rejection · stays visible · nothing deleted.</div>'+
+    '</div>';
+}
+function pickReason(btn,r){
+  SELECTED_REASON=r;
+  document.querySelectorAll(".reason-chip").forEach(function(c){c.classList.remove("on");});
+  btn.classList.add("on");
+  var t=document.getElementById("close-reason-text"); if(t) t.value="";
+  updateCloseConfirm();
+}
+function onReasonText(){
+  var t=document.getElementById("close-reason-text");
+  if(t && t.value.trim()){ SELECTED_REASON=""; document.querySelectorAll(".reason-chip").forEach(function(c){c.classList.remove("on");}); }
+  updateCloseConfirm();
+}
+function currentReason(){ var t=document.getElementById("close-reason-text"); var typed=t?t.value.trim():""; return typed||SELECTED_REASON||""; }
+function updateCloseConfirm(){ var b=document.getElementById("close-confirm"); if(b) b.disabled=!currentReason(); }
+function closeDialogCancel(){ SELECTED_REASON=""; document.getElementById("modal-root").innerHTML=""; syncStatusUI(); }
+async function confirmClose(id){
+  var reason=currentReason(); if(!reason) return;
+  var b=document.getElementById("close-confirm"); if(b) b.disabled=true;
+  flashStatus("close-status","Closing…","");
+  try{
+    var data=await postUpdate({id:id, closeReason:reason});
+    var job=getJobs().filter(function(x){return x.id===id;})[0];
+    if(job){ job.stage=data.stage; job.pursue=!!data.pursue; job.nextAction=data.nextAction||""; job.nextActionDate=""; job.notes=data.notes; }
+    document.getElementById("modal-root").innerHTML="";
+    syncStatusUI();
+  }catch(err){ flashStatus("close-status","Couldn't close: "+err.message,"err"); if(b) b.disabled=false; }
+}
+
+/* Reopen (undo a Close): confirm → Stage→Saved + dated note. alsoPursue turns Pursue
+   on in the same write (used when the person ticks Pursue on a Closed row). */
+function openReopenDialog(id, alsoPursue){
+  var j=getJobs().filter(function(x){return x.id===id;})[0]; if(!j) return;
+  document.getElementById("modal-root").innerHTML=
+    '<div class="modal-overlay" onclick="reopenCancel()"></div>'+
+    '<div class="modal-card" role="dialog" aria-modal="true" aria-label="Reopen opportunity">'+
+      '<h3>Reopen &ldquo;'+esc(j.company)+'&rdquo; to Saved?</h3>'+
+      '<div class="modal-sub">'+esc(j.role)+'</div>'+
+      '<div class="modal-actions" style="margin-top:16px">'+
+        '<button type="button" class="btn-green" id="reopen-confirm" onclick="confirmReopen(\''+id+'\','+(alsoPursue?"true":"false")+')">Reopen to Saved</button>'+
+        '<button type="button" class="link-btn" onclick="reopenCancel()">Cancel</button>'+
+        '<span class="edit-status" id="reopen-status"></span>'+
+      '</div>'+
+      '<div class="readonly-note">'+(alsoPursue?"Pursuing needs an active role — this reopens it to Saved and turns Pursue on.":"Sets Stage → Saved and appends a dated note.")+'</div>'+
+    '</div>';
+}
+function reopenCancel(){ document.getElementById("modal-root").innerHTML=""; syncStatusUI(); }
+async function confirmReopen(id, alsoPursue){
+  var b=document.getElementById("reopen-confirm"); if(b) b.disabled=true;
+  flashStatus("reopen-status","Reopening…","");
+  try{
+    var payload={id:id, reopen:true}; if(alsoPursue) payload.pursue=true;
+    var data=await postUpdate(payload);
+    var job=getJobs().filter(function(x){return x.id===id;})[0];
+    if(job){ job.stage=data.stage; job.pursue=!!data.pursue; job.notes=data.notes; }
+    document.getElementById("modal-root").innerHTML="";
+    syncStatusUI();
+  }catch(err){ flashStatus("reopen-status","Couldn't reopen: "+err.message,"err"); if(b) b.disabled=false; }
+}
+
+/* ============================================================
+   SLICE 4 — Settings (admin) tab. GET/PUT via /.netlify/functions/settings.
+   ============================================================ */
+var SETTINGS_STATE=null, SETTINGS_LOADED=null, SETTINGS_SAVING=false;
+var S_PRESETS=["Reach & Pivot","Land Fast","Custom"];
+var S_BASES=["Base only","Base + guaranteed bonus","Total cash comp"];
+var S_LEVELS=["None","Manager+","Director+"];
+var S_LOCATIONS=["Remote-US or Tucson","Remote-US only"];
+
+function settingsBack(){ showView("dashboard"); window.scrollTo(0,0); }
+async function showSettings(){
+  document.getElementById("view-dashboard").classList.add("hidden");
+  document.getElementById("view-detail").classList.add("hidden");
+  document.getElementById("view-comp").classList.add("hidden");
+  document.getElementById("view-signals").classList.add("hidden");
+  document.getElementById("view-settings").classList.remove("hidden");
+  window.scrollTo(0,0);
+  document.getElementById("settings-body").innerHTML='<div class="empty">Loading settings…</div>';
+  try{
+    var resp=await fetch("/.netlify/functions/settings");
+    var data=await resp.json();
+    if(!resp.ok||(data&&data.error)) throw new Error((data&&data.error)||("HTTP "+resp.status));
+    SETTINGS_LOADED=normSettings(data.settings);
+    SETTINGS_STATE=normSettings(data.settings);
+    renderSettings();
+  }catch(err){
+    document.getElementById("settings-body").innerHTML='<div class="empty">Couldn’t load settings: '+esc(err.message)+'</div>';
+  }
+}
+function normSettings(S){
+  S=S||{}; var L=S.lanes||{}, V=S.vocab||{};
+  return {
+    preset:S.preset||"Custom",
+    gate:(S.gate==null?155000:Number(S.gate)),
+    target:(S.target==null?195000:Number(S.target)),
+    basis:S.basis||"Total cash comp",
+    level:S.level||"None",
+    lanes:{ai:!!L.ai,pmo:!!L.pmo,to:!!L.to},
+    vocab:{ai:V.ai||"",pmo:V.pmo||"",to:V.to||""},
+    exclusions:S.exclusions||"",
+    location:S.location||"Remote-US or Tucson",
+    resweep:!!S.resweep,
+    changeLog:S.changeLog||""
+  };
+}
+function lanesLit(){ var l=SETTINGS_STATE.lanes; return (l.ai?1:0)+(l.pmo?1:0)+(l.to?1:0); }
+function optList(arr,sel){ return arr.map(function(o){return '<option'+(sel===o?" selected":"")+'>'+esc(o)+'</option>';}).join(""); }
+function compDial(key,label){
+  var v=SETTINGS_STATE[key];
+  return '<div class="comp-dial"><label for="s-'+key+'-n">'+esc(label)+'</label>'+
+    '<input id="s-'+key+'-r" type="range" min="120000" max="260000" step="5000" value="'+v+'" oninput="onCompRange(\''+key+'\',this.value)">'+
+    '<input id="s-'+key+'-n" type="number" min="0" step="5000" value="'+v+'" oninput="onCompNum(\''+key+'\',this.value)"></div>';
+}
+function laneBlock(key,name){
+  var on=SETTINGS_STATE.lanes[key];
+  return '<div class="lane"><div class="lane-head">'+
+    '<label class="switch"><input type="checkbox"'+(on?" checked":"")+' onchange="onLane(\''+key+'\',this.checked)" aria-label="'+esc(name)+' lane"><span class="switch-track"></span></label>'+
+    '<span class="lane-name">'+esc(name)+'</span>'+
+    '<button type="button" class="link-btn" onclick="toggleVocab(\''+key+'\')">Vocab &#9662;</button></div>'+
+    (on?'<div class="lane-reminder">Add matching saved searches on LinkedIn / Indeed / Built In — the mine only sees what your alerts deliver.</div>':'')+
+    '<div id="vocab-'+key+'" class="lane-vocab hidden"><textarea oninput="onVocab(\''+key+'\',this.value)" placeholder="One term per line…">'+esc(SETTINGS_STATE.vocab[key])+'</textarea></div>'+
+  '</div>';
+}
+function renderSettings(){
+  var s=SETTINGS_STATE;
+  var seg=S_PRESETS.map(function(p){return '<button type="button" class="'+(s.preset===p?"on":"")+'" onclick="applyPreset(\''+p+'\')">'+esc(p)+'</button>';}).join("");
+  document.getElementById("settings-body").innerHTML=
+    '<section class="settings-section"><div class="eyebrow">Posture preset</div>'+
+      '<div class="seg">'+seg+'</div>'+
+      '<div class="preset-note">Reach &amp; Pivot: AI lane only, Director+. Land Fast: all lanes, Manager+. Presets never touch comp. Any manual lane or level change flips this to Custom.</div>'+
+      '<div class="filter-row" style="margin-top:14px"><label for="s-level">Level floor</label><select id="s-level" onchange="onLevel(this.value)">'+optList(S_LEVELS,s.level)+'</select></div>'+
+    '</section>'+
+    '<section class="settings-section"><div class="eyebrow">Comp dials</div>'+
+      compDial("gate","Comp gate")+compDial("target","Comp target")+
+      '<div class="filter-row"><label for="s-basis">Comp basis</label><select id="s-basis" onchange="onBasis(this.value)">'+optList(S_BASES,s.basis)+'</select></div>'+
+    '</section>'+
+    '<section class="settings-section"><div class="eyebrow">Lanes</div>'+
+      laneBlock("ai","AI Enablement")+laneBlock("pmo","PMO & Portfolio")+laneBlock("to","Transformation Office")+
+    '</section>'+
+    '<section class="settings-section"><div class="eyebrow">Hard filters</div>'+
+      '<div class="filter-row"><label for="s-loc">Location mode</label><select id="s-loc" onchange="onLocation(this.value)">'+optList(S_LOCATIONS,s.location)+'</select></div>'+
+      '<div class="filter-row"><label for="s-excl">Industry exclusions</label><input id="s-excl" type="text" value="'+esc(s.exclusions)+'" oninput="onExclusions(this.value)" placeholder="e.g. defense, gambling"></div>'+
+    '</section>'+
+    '<section class="settings-section"><div class="eyebrow">Mismatch nudges</div><div id="settings-nudges"></div></section>'+
+    '<section class="settings-section"><div class="eyebrow">Re-sweep</div>'+
+      '<div class="settings-actions"><button type="button" class="btn-ghost" id="resweep-btn" onclick="onResweep()">Re-evaluate closed rows against current settings</button><span class="edit-status" id="resweep-status"></span></div>'+
+    '</section>'+
+    '<div class="rule"></div>'+
+    '<div class="settings-actions"><button type="button" class="btn-green" id="settings-save" onclick="onSaveSettings()">Save settings</button><span class="edit-status" id="settings-status"></span></div>'+
+    (s.changeLog?'<div class="settings-changelog">'+esc(s.changeLog)+'</div>':'');
+  updateNudges();
+}
+function onCompRange(key,val){ var n=Number(val); SETTINGS_STATE[key]=n; var el=document.getElementById("s-"+key+"-n"); if(el) el.value=n; updateNudges(); }
+function onCompNum(key,val){ if(val===""){ updateNudges(); return; } var n=Number(val); if(isFinite(n)){ SETTINGS_STATE[key]=n; var el=document.getElementById("s-"+key+"-r"); if(el) el.value=n; } updateNudges(); }
+function onBasis(v){ SETTINGS_STATE.basis=v; }
+function onLocation(v){ SETTINGS_STATE.location=v; }
+function onExclusions(v){ SETTINGS_STATE.exclusions=v; }
+function onVocab(key,v){ SETTINGS_STATE.vocab[key]=v; }
+function toggleVocab(key){ var el=document.getElementById("vocab-"+key); if(el) el.classList.toggle("hidden"); }
+function applyPreset(name){
+  SETTINGS_STATE.preset=name;
+  if(name==="Reach & Pivot"){ SETTINGS_STATE.lanes={ai:true,pmo:false,to:false}; SETTINGS_STATE.level="Director+"; }
+  else if(name==="Land Fast"){ SETTINGS_STATE.lanes={ai:true,pmo:true,to:true}; SETTINGS_STATE.level="Manager+"; }
+  // Custom leaves lanes/level as-is. Comp is NEVER touched by a preset.
+  renderSettings();
+}
+function onLane(key,val){ SETTINGS_STATE.lanes[key]=val; SETTINGS_STATE.preset="Custom"; renderSettings(); }
+function onLevel(v){ SETTINGS_STATE.level=v; SETTINGS_STATE.preset="Custom"; renderSettings(); }
+function updateNudges(){
+  var s=SETTINGS_STATE, n=[], lit=lanesLit(), gate=Number(s.gate)||0, target=Number(s.target)||0;
+  if((s.preset==="Land Fast"||lit>=2) && gate>180000){ n.push('<div class="nudge nudge--warn">Broad posture with a high gate — most PMO/Transformation roles will fall below $'+Math.round(gate/1000)+'K. Adjust?</div>'); }
+  if(lit===0){ n.push('<div class="nudge nudge--alert">No lanes are lit — the mine will keep nothing.</div>'); }
+  if(gate>target){ n.push('<div class="nudge nudge--alert">Your gate exceeds your target — inputs likely swapped.</div>'); }
+  var el=document.getElementById("settings-nudges"); if(el) el.innerHTML=n.length?n.join(""):'<div class="empty" style="padding:2px 0">No mismatches — looks coherent.</div>';
+}
+async function putSettings(payload){
+  var resp=await fetch("/.netlify/functions/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+  var data=await resp.json();
+  if(!resp.ok||(data&&data.error)) throw new Error((data&&data.error)||("HTTP "+resp.status));
+  return data;
+}
+async function onResweep(){
+  flashStatus("resweep-status","Queuing…","");
+  try{
+    await putSettings({resweep:true});
+    SETTINGS_STATE.resweep=true; if(SETTINGS_LOADED) SETTINGS_LOADED.resweep=true;
+    flashStatus("resweep-status","Queued for the next mine run.","ok");
+  }catch(err){ flashStatus("resweep-status","Couldn't queue: "+err.message,"err"); }
+}
+async function onSaveSettings(){
+  if(SETTINGS_SAVING) return; SETTINGS_SAVING=true;
+  var btn=document.getElementById("settings-save"); if(btn) btn.disabled=true;
+  flashStatus("settings-status","Saving…","");
+  try{
+    var s=SETTINGS_STATE;
+    var data=await putSettings({preset:s.preset,gate:s.gate,target:s.target,basis:s.basis,level:s.level,lanes:s.lanes,vocab:s.vocab,exclusions:s.exclusions,location:s.location});
+    SETTINGS_LOADED=normSettings(data.settings);
+    SETTINGS_STATE=normSettings(data.settings);
+    renderSettings();
+    flashStatus("settings-status", data.changed?("Saved ✓ — "+(data.changeLine||"")):"No changes to save.", "ok");
+  }catch(err){ flashStatus("settings-status","Couldn't save: "+err.message,"err"); }
+  finally{ SETTINGS_SAVING=false; var b=document.getElementById("settings-save"); if(b) b.disabled=false; }
+}
+
+/* ============================================================
+   SIGNALS BOARD — GET/POST via /.netlify/functions/signals.
+   Status-grouped triage board (New → Reviewing → Pitched → Dismissed).
+   Writes only Status + an append-only dated Notes line; content fields
+   are never edited here. Pitching stays a Council/skill step.
+   ============================================================ */
+var SIGNALS=[];
+var SIG_GROUPS=["New","Reviewing","Pitched","Dismissed"];
+var SIG_TYPE_CLASS={
+  "AI Executive Hire":"sig-exec",
+  "AI Initiative / CoE Launch":"sig-coe",
+  "Public AI Commitment":"sig-commit",
+  "Restructure + AI Hiring":"sig-restructure",
+  "Other":"sig-other"
+};
+var SIG_STATUS_CLASS={New:"sig-st-new",Reviewing:"sig-st-reviewing",Pitched:"sig-st-pitched",Dismissed:"sig-st-dismissed"};
+var SIG_SHOW_DISMISSED=false;
+
+function signalsBack(){ showView("dashboard"); window.scrollTo(0,0); }
+async function showSignals(){
+  document.getElementById("view-dashboard").classList.add("hidden");
+  document.getElementById("view-detail").classList.add("hidden");
+  document.getElementById("view-comp").classList.add("hidden");
+  document.getElementById("view-settings").classList.add("hidden");
+  document.getElementById("view-signals").classList.remove("hidden");
+  window.scrollTo(0,0);
+  document.getElementById("signals-body").innerHTML='<div class="empty">Loading signals…</div>';
+  try{
+    var resp=await fetch("/.netlify/functions/signals");
+    var data=await resp.json();
+    if(!resp.ok||(data&&data.error)) throw new Error((data&&data.error)||("HTTP "+resp.status));
+    SIGNALS=(data&&data.signals)||[];
+    renderSignals();
+  }catch(err){
+    document.getElementById("signals-body").innerHTML='<div class="empty">Couldn’t load signals: '+esc(err.message)+'</div>';
+  }
+}
+
+/* ---- date helpers (display-only; browser-local is fine for chips/staleness) ---- */
+function sigIsoToday(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function sigDaysBetween(a,b){ return Math.round((new Date(b+"T00:00:00")-new Date(a+"T00:00:00"))/86400000); }
+function sigNoteLines(notes){ return (notes||"").split("\n").map(function(l){return l.trim();}).filter(Boolean); }
+function sigLastNote(notes){ var L=sigNoteLines(notes); return L.length?L[L.length-1]:""; }
+function sigDatesInNotes(notes){
+  var out=[]; sigNoteLines(notes).forEach(function(l){ var m=l.match(/^\[?(\d{4}-\d{2}-\d{2})\]?\s*:/); if(m) out.push(m[1]); });
+  return out;
+}
+function sigMaxIso(arr){ return arr.filter(Boolean).slice().sort().slice(-1)[0]||""; }
+/* Reviewing card with no activity in 7+ days = silt. (Anti-silt rule.) */
+function sigIsStale(s){
+  if(s.status!=="Reviewing") return false;
+  var latest=sigMaxIso([s.date].concat(sigDatesInNotes(s.notes)));
+  return latest ? sigDaysBetween(latest, sigIsoToday())>7 : false;
+}
+/* Next-action date parsed from the Notes BODIES (leading "[date]:" log stamps are
+   stripped so a status-change timestamp is never mistaken for a planned action).
+   Returns {iso, days, urgency:'past'|'soon'|'later'} or null. Amber if within 48h,
+   red if past — drives the Reviewing chip color and sort. */
+function sigActionText(notes){
+  return sigNoteLines(notes).map(function(l){ return l.replace(/^\[?\d{4}-\d{2}-\d{2}\]?\s*:\s*/,""); }).join("\n");
+}
+function sigNextAction(notes){
+  var text=sigActionText(notes), today=sigIsoToday(), cands=[], m;
+  var re1=/(\d{4})-(\d{2})-(\d{2})/g;
+  while((m=re1.exec(text))){ cands.push(m[1]+"-"+m[2]+"-"+m[3]); }
+  var yr=new Date().getFullYear(), re2=/(?:^|[^\d])(\d{1,2})\/(\d{1,2})(?![\d\/])/g;
+  while((m=re2.exec(text))){
+    var mo=Number(m[1]), da=Number(m[2]);
+    if(mo>=1&&mo<=12&&da>=1&&da<=31) cands.push(yr+"-"+String(mo).padStart(2,"0")+"-"+String(da).padStart(2,"0"));
+  }
+  if(!cands.length) return null;
+  var upcoming=cands.filter(function(d){return d>=today;}).sort();
+  var iso=upcoming.length?upcoming[0]:cands.slice().sort().slice(-1)[0];
+  var days=sigDaysBetween(today,iso);
+  return {iso:iso, days:days, urgency:(days<0?"past":(days<=2?"soon":"later"))};
+}
+function sigFmtDate(iso){ return iso?new Date(iso+"T00:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric"}):""; }
+
+/* Reviewing sorts by next-action date (soonest/overdue first, undated last). */
+function sigReviewingSort(a,b){
+  var na=sigNextAction(a.notes), nb=sigNextAction(b.notes);
+  if(na&&nb) return na.iso.localeCompare(nb.iso);
+  if(na) return -1; if(nb) return 1;
+  return (b.date||"").localeCompare(a.date||"");
+}
+function toggleDismissed(){ SIG_SHOW_DISMISSED=!SIG_SHOW_DISMISSED; renderSignals(); }
+/* One-line "why listed" caption from the Watchlist join (tier prefix + rationale). */
+function sigCaption(s){
+  if(!s.whyListed) return "";
+  var t=(s.tier||"").match(/^(\d+)/);
+  return (t?'<span class="sig-tier">T'+t[1]+'</span> · ':"")+esc(s.whyListed);
+}
+function renderSignals(){
+  var g={New:[],Reviewing:[],Pitched:[],Dismissed:[]};
+  SIGNALS.forEach(function(s){ (g[s.status]||(g[s.status]=[])).push(s); });
+  g.New.sort(function(a,b){return (b.date||"").localeCompare(a.date||"");});   // newest first
+  g.Reviewing.sort(sigReviewingSort);
+  g.Pitched.sort(function(a,b){return (b.date||"").localeCompare(a.date||"");});
+  g.Dismissed.sort(function(a,b){return (b.date||"").localeCompare(a.date||"");});
+  var html="";
+  ["New","Reviewing","Pitched"].forEach(function(status){
+    if(!g[status].length) return;
+    html+='<div class="sig-group-label">'+status+' <span>'+g[status].length+'</span></div>'+
+      '<div class="sig-feed">'+g[status].map(signalCard).join("")+'</div>';
+  });
+  html+='<div class="sig-dismissed-wrap">'+
+    '<button type="button" class="sig-dismissed-toggle" onclick="toggleDismissed()">'+
+      (SIG_SHOW_DISMISSED?"Hide dismissed":("Show dismissed ("+g.Dismissed.length+")"))+'</button>'+
+    (SIG_SHOW_DISMISSED?'<div class="sig-feed sig-feed--dismissed">'+(g.Dismissed.length?g.Dismissed.map(signalCard).join(""):'<div class="empty">None dismissed.</div>')+'</div>':'')+
+  '</div>';
+  if(!g.New.length&&!g.Reviewing.length&&!g.Pitched.length&&!g.Dismissed.length) html='<div class="empty">No signals yet.</div>';
+  document.getElementById("signals-body").innerHTML=html;
+}
+function sigActionLabel(t){ return t==="Dismissed"?"Dismiss":("&rarr; "+esc(t)); }
+function signalCard(s){
+  var typeClass=SIG_TYPE_CLASS[s.type]||"sig-other";
+  var stClass=SIG_STATUS_CLASS[s.status]||"sig-st-new";
+  var who=(s.angle||"").split("\n")[0].trim();
+  var last=sigLastNote(s.notes);
+  var stale=sigIsStale(s);
+  var na=sigNextAction(s.notes);
+  var caption=sigCaption(s);
+  var actions=SIG_GROUPS.filter(function(t){return t!==s.status;}).map(function(t){
+    return '<button type="button" class="sig-act'+(t==="Dismissed"?" sig-act--dismiss":"")+'" onclick="onSignalAction(this,\''+s.id+'\',\''+t+'\')">'+sigActionLabel(t)+'</button>';
+  }).join("");
+  var flags=
+    (na?'<span class="sig-chip sig-chip--'+na.urgency+'">&#9203; '+(na.urgency==="past"?"Overdue ":"")+esc(sigFmtDate(na.iso))+'</span>':'')+
+    (stale?'<span class="sig-stale">Stale &mdash; act or dismiss</span>':'');
+  return '<div class="sig-card'+(stale?' sig-card--stale':'')+'">'+
+    '<div class="sig-card-top">'+
+      '<span class="pill-s sig-status '+stClass+'">'+esc(s.status)+'</span>'+
+      '<span class="sig-type '+typeClass+'">'+esc(s.type||"Signal")+'</span>'+
+      (s.date?'<span class="sig-date">'+esc(sigFmtDate(s.date))+'</span>':'')+
+    '</div>'+
+    '<div class="sig-title">'+esc(s.signal)+'</div>'+
+    (s.company?'<div class="sig-co">'+esc(s.company)+'</div>':'')+
+    (caption?'<div class="sig-why">'+caption+'</div>':'')+
+    (flags?'<div class="sig-flags">'+flags+'</div>':'')+
+    (who?'<div class="sig-who">'+esc(who)+'</div>':'')+
+    (last?'<div class="sig-note"><span class="sig-note-lbl">Latest</span> '+mdInline(last)+'</div>':'')+
+    signalExpand(s)+
+    signalStaged(s)+
+    signalAddNote(s)+
+    '<div class="sig-actions">'+actions+'</div>'+
+  '</div>';
+}
+/* Staged Outreach (if the row has it): collapsible + copy-to-clipboard + Mark sent. */
+function signalStaged(s){
+  if(!s.staged || !s.staged.trim()) return "";
+  return '<details class="sig-staged"><summary>Staged outreach</summary>'+
+    '<div class="sig-staged-body">'+
+      '<div class="sig-staged-actions">'+
+        '<button type="button" class="sig-copy" onclick="copyStaged(this,\''+s.id+'\')">Copy</button>'+
+        '<button type="button" class="sig-marksent" onclick="onMarkSent(this,\''+s.id+'\')">Mark sent</button>'+
+      '</div>'+
+      '<div class="sig-staged-text md-scope">'+mdToHtml(s.staged)+'</div>'+
+    '</div></details>';
+}
+/* Per-card note box → appends "[date]: text" (read-then-concatenate, server-side). */
+function signalAddNote(s){
+  return '<div class="sig-addnote">'+
+    '<input type="text" class="sig-note-input" id="signote-'+s.id+'" placeholder="Add a dated note…" onkeydown="sigNoteKey(event,\''+s.id+'\')">'+
+    '<button type="button" class="sig-note-btn" onclick="onAddSigNote(this,\''+s.id+'\')">Add note</button>'+
+  '</div>';
+}
+function signalExpand(s){
+  var url=safeUrl(s.sourceUrl);
+  var body=
+    (s.summary?'<div class="sig-sec"><span class="sig-sec-lbl">Summary</span>'+mdToHtml(s.summary)+'</div>':'')+
+    (s.angle?'<div class="sig-sec"><span class="sig-sec-lbl">Suggested angle</span>'+mdToHtml(s.angle)+'</div>':'')+
+    (s.notes?'<div class="sig-sec"><span class="sig-sec-lbl">Notes</span>'+mdToHtml(s.notes)+'</div>':'')+
+    (url?'<a class="posting-btn sig-src" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">Open source <span aria-hidden="true">&rarr;</span></a>':'');
+  if(!body) return '';
+  return '<details class="sig-more"><summary>Details</summary><div class="sig-more-body">'+body+'</div></details>';
+}
+
+function sigToast(msg,cls){
+  var t=document.getElementById("sig-toast"); if(!t) return;
+  t.className="sig-toast "+(cls||""); t.textContent=msg; t.classList.remove("hidden");
+  clearTimeout(sigToast._t); sigToast._t=setTimeout(function(){ t.classList.add("hidden"); },2600);
+}
+/* One write at a time on the board. Guards against a rapid multi-click firing
+   duplicate Notes appends (seen 2026-07-17: a triple-click wrote three notes). */
+var SIG_WRITING=false;
+function sigLockCard(btn,locked){
+  var card=btn.closest(".sig-card"); if(!card) return;
+  var bs=card.querySelectorAll(".sig-act");
+  for(var i=0;i<bs.length;i++) bs[i].disabled=locked;
+  if(locked){ if(btn.dataset.orig==null) btn.dataset.orig=btn.innerHTML; btn.innerHTML="…"; }
+  else if(btn.dataset.orig!=null){ btn.innerHTML=btn.dataset.orig; delete btn.dataset.orig; }
+}
+/* Single POST path. Reconciles the row in place, preserving the Watchlist-join
+   fields (whyListed/tier) which the write response doesn't re-compute, then re-renders. */
+async function postSignal(payload){
+  var resp=await fetch("/.netlify/functions/signals",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+  var data=await resp.json();
+  if(!resp.ok||(data&&data.error)) throw new Error((data&&data.error)||("HTTP "+resp.status));
+  for(var k=0;k<SIGNALS.length;k++){ if(SIGNALS[k].id===payload.id){ var old=SIGNALS[k]; SIGNALS[k]=data.signal; SIGNALS[k].whyListed=old.whyListed; SIGNALS[k].tier=old.tier; break; } }
+  renderSignals();
+  return data.signal;
+}
+function changeSignalStatus(id,status,reason){ var p={id:id,status:status}; if(reason) p.reason=reason; return postSignal(p); }
+
+/* Copy the RAW staged-outreach text (not the rendered markdown). */
+function fallbackCopy(txt){ try{ var ta=document.createElement("textarea"); ta.value=txt; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta); }catch(e){} }
+function copyStaged(btn,id){
+  var s=SIGNALS.filter(function(x){return x.id===id;})[0]; if(!s) return;
+  var txt=s.staged||"", o=btn.textContent;
+  function done(){ btn.textContent="Copied ✓"; setTimeout(function(){ btn.textContent=o; },1600); }
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(done,function(){ fallbackCopy(txt); done(); }); }
+  else { fallbackCopy(txt); done(); }
+}
+/* Mark sent → Status Pitched + "[date]: Outreach sent by Tim". */
+async function onMarkSent(btn,id){
+  if(SIG_WRITING) return;
+  SIG_WRITING=true; btn.disabled=true; var o=btn.textContent; btn.textContent="…";
+  try{ await postSignal({id:id,status:"Pitched",note:"Outreach sent by Tim"}); sigToast("Marked sent → Pitched ✓","ok"); }
+  catch(err){ btn.disabled=false; btn.textContent=o; sigToast("Couldn’t mark sent: "+err.message,"err"); }
+  finally{ SIG_WRITING=false; }
+}
+/* Per-card Add note. */
+function sigNoteKey(e,id){ if(e.key==="Enter"){ e.preventDefault(); onAddSigNote(e.target.parentNode.querySelector(".sig-note-btn"),id); } }
+async function onAddSigNote(btn,id){
+  if(SIG_WRITING) return;
+  var inp=document.getElementById("signote-"+id), txt=inp?inp.value.trim():"";
+  if(!txt){ if(inp) inp.focus(); return; }
+  SIG_WRITING=true; btn.disabled=true; if(inp) inp.disabled=true; var o=btn.textContent; btn.textContent="…";
+  try{ await postSignal({id:id,noteAppend:txt}); sigToast("Note added ✓","ok"); }
+  catch(err){ btn.disabled=false; if(inp){ inp.disabled=false; } btn.textContent=o; sigToast("Couldn’t add note: "+err.message,"err"); }
+  finally{ SIG_WRITING=false; }
+}
+async function onSignalAction(btn,id,status){
+  if(SIG_WRITING) return;                       // ignore re-clicks while a write is in flight
+  if(status==="Dismissed"){ openDismissDialog(id); return; }
+  SIG_WRITING=true; sigLockCard(btn,true);
+  try{
+    await changeSignalStatus(id,status,null);   // success re-renders the board (fresh, enabled buttons)
+    sigToast("Moved to "+status+" ✓","ok");
+  }catch(err){
+    sigLockCard(btn,false);                      // failure: restore this card's buttons
+    sigToast("Couldn’t update: "+err.message,"err");
+  }finally{ SIG_WRITING=false; }
+}
+
+/* Dismiss requires a one-line reason (mirrors the Close action). */
+var SIG_DISMISS_REASONS=["Not a fit","Already actioned","Too early / no angle","Duplicate"];
+var SIG_SELECTED_REASON="";
+function openDismissDialog(id){
+  var s=SIGNALS.filter(function(x){return x.id===id;})[0]; if(!s) return;
+  SIG_SELECTED_REASON="";
+  var chips=SIG_DISMISS_REASONS.map(function(r){return '<button type="button" class="reason-chip" onclick="pickSigReason(this,\''+esc(r)+'\')">'+esc(r)+'</button>';}).join("");
+  document.getElementById("modal-root").innerHTML=
+    '<div class="modal-overlay" onclick="dismissCancel()"></div>'+
+    '<div class="modal-card" role="dialog" aria-modal="true" aria-label="Dismiss signal">'+
+      '<h3>Dismiss &ldquo;'+esc(s.company||s.signal)+'&rdquo;?</h3>'+
+      '<div class="modal-sub">'+esc(s.signal)+'</div>'+
+      '<div class="reason-label">Reason (required)</div>'+
+      '<div class="reason-chips">'+chips+'</div>'+
+      '<input type="text" id="sig-reason-text" class="reason-text" placeholder="…or type a reason" oninput="onSigReasonText()">'+
+      '<div class="modal-actions">'+
+        '<button type="button" class="btn-close-confirm" id="sig-dismiss-confirm" disabled onclick="confirmDismiss(\''+s.id+'\')">Dismiss signal</button>'+
+        '<button type="button" class="link-btn" onclick="dismissCancel()">Cancel</button>'+
+        '<span class="edit-status" id="sig-dismiss-status"></span>'+
+      '</div>'+
+      '<div class="readonly-note">Sets Status → Dismissed and appends a dated Notes line. Nothing is deleted — move it back anytime.</div>'+
+    '</div>';
+}
+function pickSigReason(btn,r){ SIG_SELECTED_REASON=r; document.querySelectorAll("#modal-root .reason-chip").forEach(function(c){c.classList.remove("on");}); btn.classList.add("on"); var t=document.getElementById("sig-reason-text"); if(t) t.value=""; updateSigDismiss(); }
+function onSigReasonText(){ var t=document.getElementById("sig-reason-text"); if(t&&t.value.trim()){ SIG_SELECTED_REASON=""; document.querySelectorAll("#modal-root .reason-chip").forEach(function(c){c.classList.remove("on");}); } updateSigDismiss(); }
+function sigCurrentReason(){ var t=document.getElementById("sig-reason-text"); var typed=t?t.value.trim():""; return typed||SIG_SELECTED_REASON||""; }
+function updateSigDismiss(){ var b=document.getElementById("sig-dismiss-confirm"); if(b) b.disabled=!sigCurrentReason(); }
+function dismissCancel(){ SIG_SELECTED_REASON=""; document.getElementById("modal-root").innerHTML=""; }
+async function confirmDismiss(id){
+  if(SIG_WRITING) return;
+  var reason=sigCurrentReason(); if(!reason) return;
+  var b=document.getElementById("sig-dismiss-confirm"); if(b) b.disabled=true;
+  SIG_WRITING=true;
+  flashStatus("sig-dismiss-status","Dismissing…","");
+  try{
+    await changeSignalStatus(id,"Dismissed",reason);
+    document.getElementById("modal-root").innerHTML="";
+    sigToast("Dismissed ✓","ok");
+  }catch(err){ flashStatus("sig-dismiss-status","Couldn’t dismiss: "+err.message,"err"); if(b) b.disabled=false; }
+  finally{ SIG_WRITING=false; }
+}
+
+loadJobs();
+loadHealth();
+computeW2();
+compute1099();
+</script>
+</body>
+</html>

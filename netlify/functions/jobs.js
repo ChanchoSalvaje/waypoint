@@ -36,6 +36,19 @@ const FIELDS = {
   prepQuestions:  "fldTCQjStup2JH3VP", // Questions to Ask
   prepLikely:     "fldBAnSfhJ1f68Nky", // Likely Questions & Prep
   notes:          "fldXN9uz1ZcIFtsKm", // Notes
+  decisionBrief: "fldsjbfXUrp0joC8W",
+  recommendation: "fld9ZDzHBmaOeb76I",
+  researchStatus: "fld32khMe5iDpBXI8",
+  fitBasis: "fldDMX1K0E72fg1w9",
+  employerPostedAt: "flddbR82rBFLUNFyw",
+  firstSeenAt: "fldGoCjcgaTFOwY8U",
+  lastVerifiedAt: "fldCN0veVVeod9mbJ",
+  contactResearch: "fldKDQs5jnPKuk0wi",
+  suggestedUpdate: "fld8E64v21aJookkK",
+  contactReferral: "fldAPyNaARJe2UQpH",
+  closeDate: "fld3rOnvqrwKEq3xD",
+  outreach: "fldccYfWeLxYIUf0n",
+  jobKey: "fldWUKCVM1A3tT71E",
 };
 
 // Turn one Airtable record into the job shape index.html renders.
@@ -73,10 +86,11 @@ function mapRecord(record) {
       likely:     f[FIELDS.prepLikely] || "",
     },
     notes: f[FIELDS.notes] || "",
+    ...Object.fromEntries(["recommendation", "decisionBrief", "researchStatus", "fitBasis", "employerPostedAt", "firstSeenAt", "lastVerifiedAt", "contactResearch", "suggestedUpdate", "contactReferral", "closeDate", "outreach", "jobKey"].map(key => [key, f[FIELDS[key]] || ""])),
   };
 }
 
-exports.handler = async function () {
+exports.handler = async function (event = {}) {
   const token = process.env.AIRTABLE_TOKEN;
 
   // Fail loudly (but safely) if the token isn't set. Its one home is the
@@ -99,6 +113,7 @@ exports.handler = async function () {
         `https://api.airtable.com/v0/${BASE_ID}/${TABLE_ID}`
       );
       url.searchParams.set("pageSize", "100");
+      if (event.queryStringParameters?.active === "true") url.searchParams.set("filterByFormula", "{Stage}!='Closed'");
       url.searchParams.set("returnFieldsByFieldId", "true"); // key fields by ID
       if (offset) url.searchParams.set("offset", offset);
 
@@ -119,7 +134,7 @@ exports.handler = async function () {
       offset = page.offset;
     } while (offset);
 
-    return json(200, { jobs: records.map(mapRecord) });
+    return json(200, { jobs: records.map(mapRecord), asOf: new Date().toISOString() });
   } catch (err) {
     return json(500, { error: "Unexpected error fetching Airtable data.", detail: String(err) });
   }
@@ -128,7 +143,9 @@ exports.handler = async function () {
 function json(statusCode, body) {
   return {
     statusCode,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
     body: JSON.stringify(body),
   };
 }
+
+exports.mapRecord = mapRecord;

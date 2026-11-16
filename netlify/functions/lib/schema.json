@@ -1,0 +1,54 @@
+{
+  "base": "appUQQ4gnT7UuFOOm",
+  "opportunities": "tblWZyC4j4z12roVq",
+  "settings": "tbl4RoBe4zpDora2R",
+  "runs": "tblHXSi0UIjSjahgI",
+  "sources": "tblJPjJWbzOk6lKPj",
+  "fields": {
+    "Decision Brief": "fldsjbfXUrp0joC8W",
+    "Research Status": "fld32khMe5iDpBXI8",
+    "Fit Basis": "fldDMX1K0E72fg1w9",
+    "Employer Posted At": "flddbR82rBFLUNFyw",
+    "First Seen At": "fldGoCjcgaTFOwY8U",
+    "Last Verified At": "fldCN0veVVeod9mbJ",
+    "Contact Research": "fldKDQs5jnPKuk0wi"
+  },
+  "runFields": {
+    "Run Key": "fldV2TqtdfgdxoUPX",
+    "Workflow": "fldv7n2luLvIa0IVD",
+    "Started At": "fldzusef8WwmmVCJ3",
+    "Finished At": "fldyAhRoK4sLE7FvH",
+    "Status": "fldvoOXJWpYYHLfSj",
+    "Items Read": "fldRC8C0i01J9LwvD",
+    "Items Written": "fldmFe4IAgB3semE8",
+    "Details": "fld3IZ1dJ9zs2kyt9"
+  },
+  "sourceFields": {
+    "Company": "fld7fCz6rjIXqUtbt",
+    "Provider": "fldxRRp7kIuSUGmPm",
+    "Board": "fldZTatrOjqXqE7ij",
+    "Careers URL": "fldbcVs8iVmFzpRKW",
+    "Enabled": "fldxpWDhMbyENUsUA",
+    "Last Attempt": "flduN5PNRwvTutLmI",
+    "Last Success": "fldNf2RfVs1XK0C7H",
+    "Last Error": "fldZ6ywiBaGTbMhjq",
+    "Jobs Seen": "fldSkKcLL5fmG60vw",
+    "Pilot Notes": "fldaomcCeSnhSwAyw",
+    "Known Job IDs": "fld4GZC5VVvR1zKGe"
+  },
+  "leads": "tblYkYTvDErpBTQQM",
+  "leadFields": {
+    "Source Key": "fldgDJSNvOLxhB07P",
+    "Company": "fldEWSdaCpi0R72MX",
+    "Role": "fldP3xu62LGAneDa7",
+    "Location": "fldsNWbY4sPgTcIsA",
+    "Posting URL": "fldVfqIUnBMQPuwsn",
+    "Apply URL": "fldJJvC9zfZvuVY6N",
+    "Posting Text": "fldA7OMvhr5IzgDyp",
+    "First Seen At": "fldbmu7ZS0udBOI0R",
+    "Employer Timestamp": "fldhBOokLx4jZX5fC",
+    "Timestamp Kind": "fldvMEa3ZZo6a0XRp",
+    "State": "fldq7piJtyY0OX1tp",
+    "Review Notes": "fldl8ePF5tcZJV0HH"
+  }
+}
