@@ -8,8 +8,22 @@ A personal dashboard for running a job search. It sits on top of an Airtable bas
 - Netlify Functions read and write Airtable. The API token stays in Netlify's environment variables and never reaches the browser.
 - A Netlify edge function puts the whole site behind a password.
 - Writes are limited on purpose. One record at a time, five allowed fields, and notes that can only be added to, never overwritten.
-- A background function checks public job boards (Greenhouse, Lever, Ashby) for companies on a watchlist and adds new matches for review.
-- Tests cover the fit-read and notes-timeline display logic.
+- An hourly scheduled launcher starts a background collector for configured public employer boards (Greenhouse, Lever, Ashby). The first complete read is a baseline; later unseen matching postings enter a separate raw Lead Inbox for qualification. The historical Watchlist job poller remains retired.
+- Decision briefs, contact research and reply proposals appear beside the preserved full dossiers. System coverage distinguishes a successful pipeline read from actual employer-board freshness and completed workflow receipts.
+- The original interface remains at `/classic.html`; the existing Spore workspace remains at `/spore/`.
+- Tests cover display/content preservation, existing authentication and write boundaries, source pagination, collector replay/recovery, and honest freshness states.
+
+## Operations
+
+The collector is scheduled at minute 10 of each UTC hour (also minute 10 in Tucson). Netlify's short scheduled invocation launches the background function using the existing server-only site authentication. Neither credentials nor Airtable data belong in this repository. Inspect the deployed function's schedule/logs and the canonical Automation Runs receipts to verify execution; the configuration file alone does not prove a deployment or run.
+
+Collector receipts use an hourly key and read-before-write ownership checks. These checks are not an atomic lock. Unresolved Running work blocks another collector; reconcile its writes before retrying. Candidate writes are read back before the board baseline advances. Uncertain creates are not automatically retried. Source failures preserve the previous baseline and appear as Partial/Failed receipts. Reads older than two hours show as overdue in the System view.
+
+Hunter is optional and disabled unless both server configuration and explicit lookup enablement are present. A user-initiated lookup can consume account credits; no outreach or applications are sent. The ordinary website link works without API setup.
+
+Run `npm test` before deployment. Production publishes from GitHub `main`; a pull-request deploy preview is suitable for interface review but does not automatically run scheduled functions. Verify the published commit, inspect the collector's Scheduled badge, perform a provider-controlled Run now check, and confirm its business-data readback. An automatic scheduled run must be observed separately from that manual test.
+
+Rollback the code to the preceding published Git commit through the normal deployment flow. A code rollback does not reverse tracker changes, source baselines, or run receipts; preserve and reconcile those separately.
 
 ## How I built it
 

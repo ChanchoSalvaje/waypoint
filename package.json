@@ -2,8 +2,10 @@
   "name": "pipeline-command-center",
   "version": "1.0.0",
   "private": true,
-  "description": "Read-only Airtable-backed job pipeline dashboard (Slice 1, local-first).",
+  "description": "Private Airtable-backed career workspace with proactive research and direct-employer discovery",
   "scripts": {
-    "dev": "netlify dev"
+    "dev": "node scripts/preview.cjs",
+    "dev:netlify": "netlify dev",
+    "test": "node --test tests/*.test.js tests/*.test.cjs"
   }
 }
