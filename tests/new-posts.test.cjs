@@ -52,3 +52,30 @@ test('new posts combine exact source matches and retain distinct requisitions', 
   assert.equal(lead.nextStep, 'Confirm Tucson eligibility.');
   assert.deepEqual(combinePosts([lead, distinct], [tracked]).map(item => item.id), ['tracked', 'distinct']);
 });
+
+test('recent posts carry the recorded fit score and its basis for each kind of role', async t => {
+  const { handler } = require('../netlify/functions/new-posts');
+  const { schema } = require('../netlify/functions/lib/airtable');
+  const oldToken = process.env.AIRTABLE_TOKEN;
+  process.env.AIRTABLE_TOKEN = 'test';
+  t.after(() => { if (oldToken === undefined) delete process.env.AIRTABLE_TOKEN; else process.env.AIRTABLE_TOKEN = oldToken; });
+  t.mock.method(global, 'fetch', async url => ({
+    ok: true,
+    json: async () => ({ records: url.includes(schema.leads) ? [
+      { id: 'lead1', fields: { [schema.leadFields['Fit Score']]: 4, [schema.leadFields['Fit Basis']]: 'Title' } },
+      { id: 'lead2', fields: {} }
+    ] : [{ id: 'tracked', fields: { fldybh7PiN0armOSP: 5, [schema.fields['Fit Basis']]: 'JD' } }] })
+  }));
+  const response = await handler();
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(JSON.parse(response.body).posts.map(item => [item.fit,item.fitBasis]), [[5,'JD'],[4,'Title'],[null,'']]);
+});
+
+test('review excludes screened-out and closed rows while honoring a personal pursue override', () => {
+  assert.equal(M.inPostReview({state:'Ignored'}), false);
+  assert.equal(M.inPostReview({state:'New', decision:'Close'}), false);
+  assert.equal(M.inPostReview({state:'Ignored', decision:'Pursue'}), true);
+  assert.equal(M.inPostReview({stage:'Saved'}, 'Closed'), false);
+  assert.equal(M.inPostReview({stage:'Closed'}), false);
+  assert.equal(M.inPostReview({state:'New'}), true);
+});

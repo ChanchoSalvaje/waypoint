@@ -58,5 +58,9 @@
       return day >= start && day <= today && (!item.firstSeenAt || date(item.firstSeenAt) <= now);
     }).sort(newestFirst);
   }
-  return {stages,date,localDate,days,due,urgent,research,rank,shortlist,safeUrl,freshness,sourceHealth,opportunityMatches,opportunityRows,discoveryDay,windowStart,recentPosts};
+  function inPostReview(post, currentStage) {
+    if ((currentStage || post.stage) === 'Closed' || post.decision === 'Close') return false;
+    return post.state !== 'Ignored' || post.decision === 'Pursue';
+  }
+  return {inPostReview,stages,date,localDate,days,due,urgent,research,rank,shortlist,safeUrl,freshness,sourceHealth,opportunityMatches,opportunityRows,discoveryDay,windowStart,recentPosts};
 });

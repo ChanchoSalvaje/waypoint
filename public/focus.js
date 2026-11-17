@@ -22,15 +22,21 @@ async function load(){
  $('today-date').textContent=new Date().toLocaleDateString('en-US',{timeZone:'America/Phoenix',weekday:'long',month:'long',day:'numeric'});
  render();$('refresh').disabled=false;
 }
-function card(j){const state=M.research(j),fresh=M.freshness(j),basis=j.fitBasis==='JD'?'JD reviewed':j.fitBasis==='Title'?'Title only':'Basis not recorded';
- return `<article class="job-card ${selected===j.id?'selected':''}"><div class="job-top"><div class="company"><span class="avatar" aria-hidden="true">${esc(j.company.charAt(0))}</span>${esc(j.company)}</div><div class="fit">${j.fit??'—'}${j.fit?'/5':''}<small>${esc(basis)}</small></div></div><h3>${esc(j.role)}</h3><div class="meta"><span>${esc(j.comp||'Pay needs checking')}</span><span>${esc(j.workMode||'Location needs checking')}</span></div><p class="brief-preview">${esc(short(j.decisionBrief||j.fitRead||'A decision brief is queued. The existing score has not yet been checked against the full job description.'))}</p><div class="tagline">${j.recommendation?'<span class="tag partial">'+esc(j.recommendation)+'</span>':''}<span class="tag ${state==='Ready'?'ready':state==='Partial'||state==='Blocked'?'partial':''}">${esc(state==='Existing research'?'Existing research · date varies':'Research: '+state.toLowerCase())}</span><span class="tag ${fresh.kind}">${esc(fresh.label)}</span>${M.urgent(j)?'<span class="tag urgent">Needs attention</span>':''}<span class="tag">${esc(j.stage||'Stage unknown')}</span></div><div class="card-actions"><button class="primary-btn" data-review="${j.id}">Review brief →</button><button class="quiet" data-pursue="${j.id}" ${preview?'disabled':''}>${j.pursue?'Pursuing ✓':'Pursue'}</button><button class="text-btn" data-close="${j.id}" ${preview?'disabled':''}>Close</button></div></article>`;
+function fitBadge(item) {
+ const score=item.fit;
+ if (!Number.isInteger(score) || score<1 || score>5) return '<span class="fit-score unrated">Fit unscored</span>';
+ const basis={JD:'Job description',Title:'Title only'}[item.fitBasis] || 'Basis unrecorded';
+ return `<span class="fit-score level-${score}"><b>Fit ${score}/5</b><span>${basis}</span></span>`;
+}
+function card(j){const state=M.research(j),fresh=M.freshness(j);
+ return `<article class="job-card ${selected===j.id?'selected':''}"><div class="job-top"><div class="company"><span class="avatar" aria-hidden="true">${esc(j.company.charAt(0))}</span>${esc(j.company)}</div>${fitBadge(j)}</div><h3>${esc(j.role)}</h3><div class="meta"><span>${esc(j.comp||'Pay needs checking')}</span><span>${esc(j.workMode||'Location needs checking')}</span></div><p class="brief-preview">${esc(short(j.decisionBrief||j.fitRead||'A decision brief is queued. The existing score has not yet been checked against the full job description.'))}</p><div class="tagline">${j.recommendation?'<span class="tag partial">'+esc(j.recommendation)+'</span>':''}<span class="tag ${state==='Ready'?'ready':state==='Partial'||state==='Blocked'?'partial':''}">${esc(state==='Existing research'?'Existing research · date varies':'Research: '+state.toLowerCase())}</span><span class="tag ${fresh.kind}">${esc(fresh.label)}</span>${M.urgent(j)?'<span class="tag urgent">Needs attention</span>':''}<span class="tag">${esc(j.stage||'Stage unknown')}</span></div><div class="card-actions"><button class="primary-btn" data-review="${j.id}">Review brief →</button><button class="quiet" data-pursue="${j.id}" ${preview?'disabled':''}>${j.pursue?'Pursuing ✓':'Pursue'}</button><button class="text-btn" data-close="${j.id}" ${preview?'disabled':''}>Close</button></div></article>`;
 }
 function render(){const active=jobs.filter(j=>M.opportunityMatches(j,'active')),decide=active.filter(j=>M.opportunityMatches(j,'decide')),research=decide.filter(j=>M.research(j)==='Ready'),replies=active.filter(j=>j.suggestedUpdate),applied=active.filter(j=>M.opportunityMatches(j,'applied'));
  $('stats').innerHTML=[[decide.length,'awaiting a decision'],[research.length,'decision briefs ready'],[replies.length,'reply updates to review'],[applied.length,'applications in motion']].map(([n,s])=>`<div class="stat"><b>${n}</b><span>${s}</span></div>`).join('');
  const applications = active.filter(job => M.opportunityMatches(job,'applied'));
  const priority = M.shortlist(applications).find(job => M.urgent(job) || ['Interviewing','Screening','Offer'].includes(job.stage));
  const prep = priority && (priority.stage==='Interviewing'||/TYPE:\s*interview/i.test(priority.suggestedUpdate||'')) && (priority.prep?.likely||priority.prep?.questions);
- $('priority-action').innerHTML = priority ? `<article class="priority-panel"><small>${prep?'Interview preparation':'Application follow-up'}</small><h2>${esc(priority.company)}</h2><b>${esc(priority.role)}</b><p>${esc(short(priority.decisionBrief||priority.nextAction||priority.fitRead,245))}</p><button class="quiet" data-review="${esc(priority.id)}" data-section="${prep?'prep':'brief'}">${prep?'Open interview prep':'Review next step'} →</button></article>` : '';
+ $('priority-action').innerHTML = priority ? `<article class="priority-panel"><div class="priority-copy"><div class="priority-meta"><small>${prep?'Interview preparation':'Application follow-up'}</small>${fitBadge(priority)}</div><h2>${esc(priority.company)}</h2><b>${esc(priority.role)}</b><p>${esc(short(priority.decisionBrief||priority.nextAction||priority.fitRead,245))}</p><button class="quiet" data-review="${esc(priority.id)}" data-section="${prep?'prep':'brief'}">${prep?'Open interview prep':'Review next step'} →</button></div><img class="priority-art" src="/catalina-sunset.webp" alt="" width="1400" height="467"></article>` : '';
  renderPicks(decide);
  const follow=active.filter(j=>j.id!==priority?.id && (j.suggestedUpdate||j.nextAction)).sort((a,b)=>M.rank(b)-M.rank(a));
  $('follow-count').textContent='('+follow.length+')';
@@ -69,7 +75,7 @@ function renderPicks(saved) {
  $('today-cards').innerHTML=rows.map(p=>{
   const job=tracked.get(p.key),item=job||leads.get(p.key);
   const secondary=job?`<button class="quiet" data-review="${esc(job.id)}">Review brief →</button>`:link(item.applyUrl||item.sourceUrl,'Read posting','quiet');
-  return `<article class="pick"><div class="pick-company">${esc(item.company)}<span>${esc(job?.recommendation||item.status)}</span></div><h3>${esc(item.role)}</h3><p>${esc(p.why)}</p>${p.question?'<p class="pick-question"><strong>Weigh up</strong> '+esc(p.question)+'</p>':''}<div class="post-links">${decisionButtons(job,item)}${secondary}</div></article>`;
+  return `<article class="pick"><div class="pick-top"><div class="pick-company">${esc(item.company)}<span>${esc(job?.recommendation||item.status)}</span></div>${fitBadge(item)}</div><h3>${esc(item.role)}</h3><p>${esc(p.why)}</p>${p.question?'<p class="pick-question"><strong>Weigh up</strong> '+esc(p.question)+'</p>':''}<div class="post-links">${decisionButtons(job,item)}${secondary}</div></article>`;
  }).join('')||(postsError?'<p class="error">Recent leads could not refresh. Use Refresh to retry.</p>':'<p class="empty">No current picks ready for a decision.</p>');
 }
 function renderOpportunities(){
@@ -87,7 +93,7 @@ function postCard(post,activeById){
  const observed=post.firstSeenAt?(post.usesCreatedTime?'Logged ':'First seen ')+tucsonDate(post.firstSeenAt,true):'Logged '+post.dateFound;
  const employer=tucsonDate(post.employerAt);
  const source=link(post.applyUrl||post.sourceUrl,'View posting');
- return `<article class="job-card post-card"><div class="post-top"><strong class="company">${esc(post.company||'Company unknown')}</strong><span class="tag ${status==='Needs verification'?'partial':''}">${esc(status)}</span></div>
+ return `<article class="job-card post-card"><div class="post-top"><div class="post-identity"><strong class="company">${esc(post.company||'Company unknown')}</strong><span class="tag ${status==='Needs verification'?'partial':''}">${esc(status)}</span></div>${fitBadge(active||post)}</div>
  <h3>${esc(post.role||'Role unknown')}</h3><div class="meta"><span>${esc(observed)}</span>${post.location?'<span>'+esc(post.location)+'</span>':''}${employer?'<span>'+esc((post.employerDateKind||'Employer date')+' · '+employer)+'</span>':''}</div>
  ${post.nextStep?'<details class="post-check"><summary>What needs checking</summary><p>'+esc(post.nextStep)+'</p></details>':''}
  <div class="post-links">${decisionButtons(active,post)}${source}${active?.stage&&active.stage!=='Closed'?'<button class="quiet" data-open-opportunity="'+esc(post.id)+'">Review brief</button>':''}</div></article>`;
@@ -101,16 +107,19 @@ function renderNewPosts(){
   }
   return;
  }
+ const activeById=new Map(jobs.map(job=>[job.id,job]));
+ const visible=post=>M.inPostReview(post,activeById.get(post.id)?.stage);
  const today=M.recentPosts(posts,1);
- const leads=today.filter(post=>post.kind==='lead').length;
- summary.textContent=postsError?'Showing the last successful read.':`${quantity(today.length,'discovery','discoveries')} today · ${quantity(leads,'lead')} · ${quantity(today.length-leads,'tracked opportunity','tracked opportunities')}`;
- const available=M.recentPosts(posts,Number($('post-window').value));
+ const reviewCount=today.filter(visible).length;
+ summary.textContent=postsError?'Showing the last successful read.':`${quantity(reviewCount,'new post')} to review today · ${today.length} discovered`;
+ const period=M.recentPosts(posts,Number($('post-window').value));
+ const includeHistory=$('post-history').checked;
+ const available=includeHistory?period:period.filter(visible);
  const query=$('post-search').value.trim().toLowerCase();
  const rows=available.filter(post=>!query||[post.company,post.role].join(' ').toLowerCase().includes(query));
- const activeById=new Map(jobs.map(job=>[job.id,job]));
  count.textContent=query?`${rows.length} of ${quantity(available.length,'post')}`:quantity(rows.length,'post');
  const warning=postsError?`<p class="error">${esc(postsError)} Showing the last successful read.</p>`:'';
- const empty=query&&available.length?'No posts match this search.':'No posts were recorded in this date range.';
+ const empty=query&&available.length?'No posts match this search.':period.length?'No posts to review. Include screened-out and closed roles to see the history.':'No posts were recorded in this date range.';
  cards.innerHTML=warning+(rows.length?rows.map(post=>postCard(post,activeById)).join(''):`<p class="empty">${empty}</p>`);
 }
 function renderSignals(){$('signal-cards').innerHTML=signalsError?`<p class="error">Signals could not refresh: ${esc(signalsError)}</p>`:signals.filter(s=>!['Dismissed','Closed','Archived'].includes(s.status)).map(s=>`<article class="signal-card"><div class="meta">${esc(s.company||'Company not recorded')} · ${esc(s.date||'Date not recorded')}</div><h3>${esc(s.signal||s.title||'Signal')}</h3><p>${esc(s.summary||'No summary recorded.')}</p>${link(s.sourceUrl,'Original source')}${s.angle?'<h4>Conversation angle</h4>'+prose(s.angle):''}${s.staged?'<details><summary>Outreach draft</summary>'+prose(s.staged)+'</details>':''}</article>`).join('')||'<p class="empty">No active signals recorded.</p>';}
@@ -119,12 +128,13 @@ function renderSystem(){if(!ops){$('system-content').innerHTML=`<div class="erro
 }
 const views={
  today:['Today’s review',''],
- 'new-posts':['New posts','Everything Waypoint captured in the selected period, including leads under review and tracked opportunities. Newest discoveries first.'],
+ 'new-posts':['New posts','New leads and active opportunities, newest first.'],
  opportunities:['Find the work that fits.','Your active pipeline, with evidence and open questions together.'],
  signals:['Get there before the posting.','Business changes that may open a useful conversation.'],
  system:['Know what is working.','Actual run receipts and source coverage, including the gaps.'],
 };
 function showView(name){
+ document.body.dataset.view=name;
  document.querySelectorAll('.view').forEach(el=>el.hidden=el.id!=='view-'+name);
  document.querySelectorAll('[data-view]').forEach(el=>{
   const current=el.dataset.view===name;
@@ -150,7 +160,7 @@ function renderDetail(){const j=jobs.find(j=>j.id===selected);if(!j)return;const
  if(detailTab==='prep')body=`<h3>Likely questions and your examples</h3>${j.prep?.likely?prose(j.prep.likely):'<p class="inline-notice">Interview preparation has not been recorded for this opportunity.</p>'}<h3>Questions to ask</h3>${j.prep?.questions?prose(j.prep.questions):'<p class="inline-notice">No interview questions have been recorded yet.</p>'}`;
  if(detailTab==='contacts')body=`<h3>A human path in</h3>${prose(j.contactResearch||j.contactReferral||'Contact research is queued. We will look for a named recruiter, a source-backed likely manager, and a genuine referral path. An executive title alone does not establish hiring responsibility.')}<div class="detail-links">${link('https://hunter.io/email-finder','Find a work email in Hunter','quiet')}</div><p class="inline-notice">Use a verified company domain and a named person. A guessed or accept-all address remains uncertain.</p>${ops?.hunterConfigured?'<form id="hunter-form" class="hunter-form"><label>Company domain<input name="domain" placeholder="company.com" required></label><label>First name<input name="firstName" required></label><label>Last name<input name="lastName" required></label><button class="quiet" type="submit">Look up in Hunter (uses account credits)</button></form><div id="hunter-result"></div>':''}<h3>Outreach package</h3>${j.outreach?prose(j.outreach):'<p class="inline-notice">A short personal note and tailored application materials can be prepared once the role and recipient are verified. Nothing is sent automatically.</p>'}`;
  if(detailTab==='history')body=`<h3>Next action</h3>${prose(j.nextAction||'No next action recorded.')}<h3>Activity &amp; source history</h3>${prose(j.notes||'No activity recorded.')}`;
- $('detail').innerHTML=`<div class="detail-head"><button class="panel-dismiss" aria-label="Close details" data-dismiss-detail>×</button><div class="company">${esc(j.company)}<span class="stage-label">${esc(j.stage)}</span></div><h2>${esc(j.role)}</h2><div class="meta"><span>${esc(j.comp||'Compensation needs checking')}</span><span>${esc(j.workMode)}</span></div></div><div class="detail-tabs" role="tablist" aria-label="Opportunity sections">${tabs.map(t=>`<button role="tab" aria-selected="${t===detailTab}" class="${t===detailTab?'active':''}" data-detail-tab="${t}">${{brief:'Role brief',prep:'Interview prep',contacts:'Contact path',history:'History'}[t]}</button>`).join('')}</div><div class="detail-body">${body}</div><div class="detail-controls"><button class="primary-btn" data-pursue="${j.id}" ${preview?'disabled':''}>${j.pursue?'Pursuing ✓':'Pursue this role'}</button><button class="quiet" data-close="${j.id}" ${preview?'disabled':''}>Close</button>${link('/classic.html','Full tools','quiet')}</div>`;
+ $('detail').innerHTML=`<div class="detail-head"><button class="panel-dismiss" aria-label="Close details" data-dismiss-detail>×</button><div class="company">${esc(j.company)}<span class="stage-label">${esc(j.stage)}</span>${fitBadge(j)}</div><h2>${esc(j.role)}</h2><div class="meta"><span>${esc(j.comp||'Compensation needs checking')}</span><span>${esc(j.workMode)}</span></div></div><div class="detail-tabs" role="tablist" aria-label="Opportunity sections">${tabs.map(t=>`<button role="tab" aria-selected="${t===detailTab}" class="${t===detailTab?'active':''}" data-detail-tab="${t}">${{brief:'Role brief',prep:'Interview prep',contacts:'Contact path',history:'History'}[t]}</button>`).join('')}</div><div class="detail-body">${body}</div><div class="detail-controls"><button class="primary-btn" data-pursue="${j.id}" ${preview?'disabled':''}>${j.pursue?'Pursuing ✓':'Pursue this role'}</button><button class="quiet" data-close="${j.id}" ${preview?'disabled':''}>Close</button>${link('/classic.html','Full tools','quiet')}</div>`;
 }
 const pendingLeads=new Set();
 async function saveLeadDecision(id,decision){
@@ -172,6 +182,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
 document.addEventListener('submit',async e=>{if(e.target.id!=='hunter-form')return;e.preventDefault();const form=e.target,values=Object.fromEntries(new FormData(form));form.querySelector('button').disabled=true;try{const r=await fetch('/.netlify/functions/hunter-contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(values)});const d=await r.json();if(!r.ok)throw new Error(d.error);$('hunter-result').innerHTML=prose(d.found?`${d.email}\nVerification: ${d.status}\nProvenance: ${d.provenance}\nChecked: ${d.checkedAt}\n${d.caution}\n${d.sources.map(s=>s.uri).join('\n')}`:'No address found.');}catch(err){$('hunter-result').textContent=err.message;}finally{form.querySelector('button').disabled=false;}});
 $('close-form').addEventListener('submit',e=>{e.preventDefault();const reason=$('close-reason').value;if(reason){$('close-dialog').close();update(closing,{closeReason:reason});}});$('cancel-close').addEventListener('click',()=>$('close-dialog').close());$('refresh').addEventListener('click',load);$('search').addEventListener('input',renderOpportunities);$('stage-filter').addEventListener('change',renderOpportunities);
 $('opportunity-sort').addEventListener('change',renderOpportunities);
+$('post-history').addEventListener('change',renderNewPosts);
 $('post-window').addEventListener('change',renderNewPosts);
 $('post-search').addEventListener('input',renderNewPosts);
 window.addEventListener('hashchange',showHashView);
