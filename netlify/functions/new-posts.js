@@ -37,6 +37,8 @@ function mapLead(row) {
   return {
     ...output,
     leadRecordId: row.id,
+    fit: row.fields[schema.leadFields['Fit Score']] ?? null,
+    fitBasis: row.fields[schema.leadFields['Fit Basis']] || '',
     id: output.sourceKey || [output.company, output.role, row.createdTime].join("|"),
     firstSeenAt: output.firstSeenAt || row.createdTime,
     usesCreatedTime: !output.firstSeenAt,
@@ -48,10 +50,10 @@ function mapLead(row) {
 }
 
 function mapOpportunity(row) {
-  const { id, company, role, stage, firstSeenAt, dateFound, employerPostedAt, link, applyLink, jobKey, workMode } = mapRecord(row);
+  const { id, company, role, stage, firstSeenAt, dateFound, employerPostedAt, link, applyLink, jobKey, workMode, fit, fitBasis } = mapRecord(row);
   return {
     id: stage === "Closed" ? jobKey || [company, role, dateFound].join("|") : id,
-    company, role, stage, firstSeenAt, dateFound,
+    company, role, stage, firstSeenAt, dateFound, fit, fitBasis,
     employerAt: employerPostedAt,
     employerDateKind: 'Employer publication',
     location: workMode,
