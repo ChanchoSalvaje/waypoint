@@ -16,8 +16,9 @@
   function opportunityMatches(job, view) {
     if (job.stage === 'Closed') return false;
     const submitted = applicationStages.has(job.stage);
-    const preparing = preparationStages.has(job.stage) || (job.stage === 'Saved' && job.pursue);
-    const deciding = job.stage === 'Saved' && !job.pursue;
+    const preparing = preparationStages.has(job.stage);
+    // The Pursue checkbox can queue research without advancing a Saved role.
+    const deciding = job.stage === 'Saved';
     if (view === 'decide') return deciding;
     if (view === 'applied') return submitted;
     if (view === 'preparing') return preparing;
