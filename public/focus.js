@@ -107,16 +107,19 @@ function renderNewPosts(){
   }
   return;
  }
+ const activeById=new Map(jobs.map(job=>[job.id,job]));
+ const visible=post=>M.inPostReview(post,activeById.get(post.id)?.stage);
  const today=M.recentPosts(posts,1);
- const leads=today.filter(post=>post.kind==='lead').length;
- summary.textContent=postsError?'Showing the last successful read.':`${quantity(today.length,'discovery','discoveries')} today · ${quantity(leads,'lead')} · ${quantity(today.length-leads,'tracked opportunity','tracked opportunities')}`;
- const available=M.recentPosts(posts,Number($('post-window').value));
+ const reviewCount=today.filter(visible).length;
+ summary.textContent=postsError?'Showing the last successful read.':`${quantity(reviewCount,'new post')} to review today · ${today.length} discovered`;
+ const period=M.recentPosts(posts,Number($('post-window').value));
+ const includeHistory=$('post-history').checked;
+ const available=includeHistory?period:period.filter(visible);
  const query=$('post-search').value.trim().toLowerCase();
  const rows=available.filter(post=>!query||[post.company,post.role].join(' ').toLowerCase().includes(query));
- const activeById=new Map(jobs.map(job=>[job.id,job]));
  count.textContent=query?`${rows.length} of ${quantity(available.length,'post')}`:quantity(rows.length,'post');
  const warning=postsError?`<p class="error">${esc(postsError)} Showing the last successful read.</p>`:'';
- const empty=query&&available.length?'No posts match this search.':'No posts were recorded in this date range.';
+ const empty=query&&available.length?'No posts match this search.':period.length?'No posts to review. Include screened-out and closed roles to see the history.':'No posts were recorded in this date range.';
  cards.innerHTML=warning+(rows.length?rows.map(post=>postCard(post,activeById)).join(''):`<p class="empty">${empty}</p>`);
 }
 function renderSignals(){$('signal-cards').innerHTML=signalsError?`<p class="error">Signals could not refresh: ${esc(signalsError)}</p>`:signals.filter(s=>!['Dismissed','Closed','Archived'].includes(s.status)).map(s=>`<article class="signal-card"><div class="meta">${esc(s.company||'Company not recorded')} · ${esc(s.date||'Date not recorded')}</div><h3>${esc(s.signal||s.title||'Signal')}</h3><p>${esc(s.summary||'No summary recorded.')}</p>${link(s.sourceUrl,'Original source')}${s.angle?'<h4>Conversation angle</h4>'+prose(s.angle):''}${s.staged?'<details><summary>Outreach draft</summary>'+prose(s.staged)+'</details>':''}</article>`).join('')||'<p class="empty">No active signals recorded.</p>';}
@@ -125,12 +128,13 @@ function renderSystem(){if(!ops){$('system-content').innerHTML=`<div class="erro
 }
 const views={
  today:['Today’s review',''],
- 'new-posts':['New posts','Everything Waypoint captured in the selected period, including leads under review and tracked opportunities. Newest discoveries first.'],
+ 'new-posts':['New posts','New leads and active opportunities, newest first.'],
  opportunities:['Find the work that fits.','Your active pipeline, with evidence and open questions together.'],
  signals:['Get there before the posting.','Business changes that may open a useful conversation.'],
  system:['Know what is working.','Actual run receipts and source coverage, including the gaps.'],
 };
 function showView(name){
+ document.body.dataset.view=name;
  document.querySelectorAll('.view').forEach(el=>el.hidden=el.id!=='view-'+name);
  document.querySelectorAll('[data-view]').forEach(el=>{
   const current=el.dataset.view===name;
@@ -178,6 +182,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
 document.addEventListener('submit',async e=>{if(e.target.id!=='hunter-form')return;e.preventDefault();const form=e.target,values=Object.fromEntries(new FormData(form));form.querySelector('button').disabled=true;try{const r=await fetch('/.netlify/functions/hunter-contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(values)});const d=await r.json();if(!r.ok)throw new Error(d.error);$('hunter-result').innerHTML=prose(d.found?`${d.email}\nVerification: ${d.status}\nProvenance: ${d.provenance}\nChecked: ${d.checkedAt}\n${d.caution}\n${d.sources.map(s=>s.uri).join('\n')}`:'No address found.');}catch(err){$('hunter-result').textContent=err.message;}finally{form.querySelector('button').disabled=false;}});
 $('close-form').addEventListener('submit',e=>{e.preventDefault();const reason=$('close-reason').value;if(reason){$('close-dialog').close();update(closing,{closeReason:reason});}});$('cancel-close').addEventListener('click',()=>$('close-dialog').close());$('refresh').addEventListener('click',load);$('search').addEventListener('input',renderOpportunities);$('stage-filter').addEventListener('change',renderOpportunities);
 $('opportunity-sort').addEventListener('change',renderOpportunities);
+$('post-history').addEventListener('change',renderNewPosts);
 $('post-window').addEventListener('change',renderNewPosts);
 $('post-search').addEventListener('input',renderNewPosts);
 window.addEventListener('hashchange',showHashView);

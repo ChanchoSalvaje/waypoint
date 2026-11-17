@@ -4,7 +4,7 @@
 <div class="workspace"><section class="primary"><div id="view-today" class="view">
  <div id="priority-action"></div>
  <section class="daily-picks"><div class="section-heading"><h2>Roles to consider</h2><a href="#opportunities">All opportunities →</a></div><div id="today-cards" class="cards" aria-live="polite"></div></section>
- <div class="review-foot"><span id="new-posts-summary" aria-live="polite"></span><a href="#new-posts">View all new posts →</a></div>
+ <div class="review-foot"><span id="new-posts-summary" aria-live="polite"></span><a href="#new-posts">View new posts →</a></div>
  <details class="followups"><summary>Other follow-ups <span id="follow-count"></span></summary><div id="followups"></div></details>
  <div class="review-foot"><span id="sweep-health"></span><a href="#system">Sweep history →</a></div>
 </div>
@@ -13,6 +13,7 @@
   <label class="search"><span class="sr-only">Search new posts</span><input id="post-search" type="search" placeholder="Company or role…"></label>
   <label><span>Discovered</span><select id="post-window"><option value="1" selected>Today</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option></select></label>
  </div>
+ <label class="history-control"><input type="checkbox" id="post-history"> Include screened-out and closed roles</label>
  <div class="section-heading"><h2>Recent discoveries</h2><span id="post-count" aria-live="polite"></span></div>
  <div id="post-cards" class="cards"><p class="empty">Reading recent discoveries…</p></div>
 </div>

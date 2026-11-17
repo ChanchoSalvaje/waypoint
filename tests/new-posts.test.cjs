@@ -70,3 +70,12 @@ test('recent posts carry the recorded fit score and its basis for each kind of r
   assert.equal(response.statusCode, 200);
   assert.deepEqual(JSON.parse(response.body).posts.map(item => [item.fit,item.fitBasis]), [[5,'JD'],[4,'Title'],[null,'']]);
 });
+
+test('review excludes screened-out and closed rows while honoring a personal pursue override', () => {
+  assert.equal(M.inPostReview({state:'Ignored'}), false);
+  assert.equal(M.inPostReview({state:'New', decision:'Close'}), false);
+  assert.equal(M.inPostReview({state:'Ignored', decision:'Pursue'}), true);
+  assert.equal(M.inPostReview({stage:'Saved'}, 'Closed'), false);
+  assert.equal(M.inPostReview({stage:'Closed'}), false);
+  assert.equal(M.inPostReview({state:'New'}), true);
+});
