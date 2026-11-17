@@ -41,6 +41,16 @@ function render(){const active=jobs.filter(j=>M.opportunityMatches(j,'active')),
  $('sweep-health').textContent=finish?`Last intake sweep · ${tucsonDate(finish,true)} Tucson · ${sweep.Status}${overdue?' · Overdue':''}`:'Intake sweep status unavailable';
  renderNewPosts();renderOpportunities();renderSignals();renderSystem();if(selected)renderDetail();
 }
+function decisionButtons(job, lead) {
+ const disabled=preview?'disabled':'';
+ if(job && job.stage!=='Closed') {
+  return `<button class="primary-btn" data-pursue="${esc(job.id)}" aria-pressed="${!!job.pursue}" ${disabled}>${job.pursue?'Pursuing ✓':'Pursue'}</button><button class="quiet" data-close="${esc(job.id)}" ${disabled}>Close</button>`;
+ }
+ if(!lead?.leadRecordId || !['New','Ignored'].includes(lead.state)) return '';
+ const button=(value,label,style)=>`<button class="${style}" data-lead-id="${esc(lead.leadRecordId)}" data-decision="${value}" ${disabled}>${label}</button>`;
+ if(lead.decision==='Close') return button('','Undo close','quiet');
+ return button(lead.decision==='Pursue'?'':'Pursue',lead.decision==='Pursue'?'Pursuing ✓':'Pursue','primary-btn')+button('Close','Close','quiet');
+}
 function renderPicks(saved) {
  const today=M.localDate();
  let picks;
@@ -53,13 +63,13 @@ function renderPicks(saved) {
   } catch { continue; }
  }
  const tracked=new Map(saved.map(job=>[job.id,job]));
- const leads=new Map((posts||[]).filter(p=>p.kind==='lead' && p.state==='New').map(p=>[p.sourceKey,p]));
+ const leads=new Map((posts||[]).filter(p=>p.kind==='lead' && p.state==='New' && p.decision!=='Close').map(p=>[p.sourceKey,p]));
  const choices=picks===undefined ? M.opportunityRows(saved.filter(j=>M.research(j)==='Ready' && j.recommendation!=='Low priority'),{view:'decide',query:'',sort:'priority'}).slice(0,2).map(job=>({key:job.id,why:short(job.decisionBrief||job.fitRead,260)})) : picks;
  const rows=choices.filter(p=>p && (tracked.has(p.key)||leads.has(p.key))).slice(0,2);
  $('today-cards').innerHTML=rows.map(p=>{
   const job=tracked.get(p.key),item=job||leads.get(p.key);
-  const action=job?`<button class="quiet" data-review="${esc(job.id)}">Review brief →</button><button class="text-btn" data-close="${esc(job.id)}" ${preview?'disabled':''}>Close</button>`:link(item.applyUrl||item.sourceUrl,'Read posting','quiet');
-  return `<article class="pick"><div class="pick-company">${esc(item.company)}<span>${esc(job?.recommendation||item.status)}</span></div><h3>${esc(item.role)}</h3><p>${esc(p.why)}</p>${p.question?'<p class="pick-question"><strong>Weigh up</strong> '+esc(p.question)+'</p>':''}<div class="post-links">${action}</div></article>`;
+  const secondary=job?`<button class="quiet" data-review="${esc(job.id)}">Review brief →</button>`:link(item.applyUrl||item.sourceUrl,'Read posting','quiet');
+  return `<article class="pick"><div class="pick-company">${esc(item.company)}<span>${esc(job?.recommendation||item.status)}</span></div><h3>${esc(item.role)}</h3><p>${esc(p.why)}</p>${p.question?'<p class="pick-question"><strong>Weigh up</strong> '+esc(p.question)+'</p>':''}<div class="post-links">${decisionButtons(job,item)}${secondary}</div></article>`;
  }).join('')||(postsError?'<p class="error">Recent leads could not refresh. Use Refresh to retry.</p>':'<p class="empty">No current picks ready for a decision.</p>');
 }
 function renderOpportunities(){
@@ -73,14 +83,14 @@ function tucsonDate(value,withTime=false){
  return d?d.toLocaleString('en-US',{timeZone:'America/Phoenix',month:'short',day:'numeric',...(withTime?{hour:'numeric',minute:'2-digit'}:{})}):'';
 }
 function postCard(post,activeById){
- const active=activeById.get(post.id),status=active?.stage||post.status;
+ const active=activeById.get(post.id),status=active?.stage||(post.decision==='Close'?'Closed by you':post.decision==='Pursue'?'Pursuing':post.status);
  const observed=post.firstSeenAt?(post.usesCreatedTime?'Logged ':'First seen ')+tucsonDate(post.firstSeenAt,true):'Logged '+post.dateFound;
  const employer=tucsonDate(post.employerAt);
  const source=link(post.applyUrl||post.sourceUrl,'View posting');
  return `<article class="job-card post-card"><div class="post-top"><strong class="company">${esc(post.company||'Company unknown')}</strong><span class="tag ${status==='Needs verification'?'partial':''}">${esc(status)}</span></div>
  <h3>${esc(post.role||'Role unknown')}</h3><div class="meta"><span>${esc(observed)}</span>${post.location?'<span>'+esc(post.location)+'</span>':''}${employer?'<span>'+esc((post.employerDateKind||'Employer date')+' · '+employer)+'</span>':''}</div>
  ${post.nextStep?'<details class="post-check"><summary>What needs checking</summary><p>'+esc(post.nextStep)+'</p></details>':''}
- <div class="post-links">${source}${active?.stage&&active.stage!=='Closed'?'<button class="quiet" data-open-opportunity="'+esc(post.id)+'">Review brief</button>':''}</div></article>`;
+ <div class="post-links">${decisionButtons(active,post)}${source}${active?.stage&&active.stage!=='Closed'?'<button class="quiet" data-open-opportunity="'+esc(post.id)+'">Review brief</button>':''}</div></article>`;
 }
 function renderNewPosts(){
  const summary=$('new-posts-summary'),count=$('post-count'),cards=$('post-cards');
@@ -142,8 +152,23 @@ function renderDetail(){const j=jobs.find(j=>j.id===selected);if(!j)return;const
  if(detailTab==='history')body=`<h3>Next action</h3>${prose(j.nextAction||'No next action recorded.')}<h3>Activity &amp; source history</h3>${prose(j.notes||'No activity recorded.')}`;
  $('detail').innerHTML=`<div class="detail-head"><button class="panel-dismiss" aria-label="Close details" data-dismiss-detail>×</button><div class="company">${esc(j.company)}<span class="stage-label">${esc(j.stage)}</span></div><h2>${esc(j.role)}</h2><div class="meta"><span>${esc(j.comp||'Compensation needs checking')}</span><span>${esc(j.workMode)}</span></div></div><div class="detail-tabs" role="tablist" aria-label="Opportunity sections">${tabs.map(t=>`<button role="tab" aria-selected="${t===detailTab}" class="${t===detailTab?'active':''}" data-detail-tab="${t}">${{brief:'Role brief',prep:'Interview prep',contacts:'Contact path',history:'History'}[t]}</button>`).join('')}</div><div class="detail-body">${body}</div><div class="detail-controls"><button class="primary-btn" data-pursue="${j.id}" ${preview?'disabled':''}>${j.pursue?'Pursuing ✓':'Pursue this role'}</button><button class="quiet" data-close="${j.id}" ${preview?'disabled':''}>Close</button>${link('/classic.html','Full tools','quiet')}</div>`;
 }
+const pendingLeads=new Set();
+async function saveLeadDecision(id,decision){
+ const lead=posts?.find(post=>post.leadRecordId===id);
+ if(preview || !lead || pendingLeads.has(id))return;
+ pendingLeads.add(id);
+ try{
+  const response=await fetch('/.netlify/functions/lead-decision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,decision,previous:lead.decision||''})});
+  const result=await response.json();
+  if(!response.ok || !result.ok)throw new Error(result.error||'Could not save the decision.');
+  const current=posts?.find(post=>post.leadRecordId===id);
+  if(current)current.decision=result.decision;
+  render();
+  notify(decision==='Pursue'?'Pursuing. Queued for research.':decision==='Close'?'Closed. You can undo this in New posts.':'Decision cleared.');
+ }catch(error){notify(error.message);}finally{pendingLeads.delete(id);}
+}
 async function update(id,body){if(preview)return;document.body.classList.add('busy');try{const r=await fetch('/.netlify/functions/update-job',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,...body})});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Update failed.');Object.assign(jobs.find(j=>j.id===id),d);render();notify(body.closeReason?'Closed. The record remains in your history.':'Saved to your tracker.');}catch(e){notify(e.message);}finally{document.body.classList.remove('busy');}}
-document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.view)location.hash=b.dataset.view;if(b.dataset.openOpportunity){location.hash='opportunities';showView('opportunities');review(b.dataset.openOpportunity);}if(b.dataset.review)review(b.dataset.review,b.dataset.section);if(b.hasAttribute('data-dismiss-detail')){selected=null;showHashView();}if(b.dataset.detailTab){detailTab=b.dataset.detailTab;renderDetail();}if(b.dataset.pursue){const j=jobs.find(j=>j.id===b.dataset.pursue);if(j)update(j.id,{pursue:!j.pursue});}if(b.dataset.close){closing=b.dataset.close;$('close-reason').value='';$('close-dialog').showModal();}});
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.leadId){saveLeadDecision(b.dataset.leadId,b.dataset.decision);return;}if(b.dataset.view)location.hash=b.dataset.view;if(b.dataset.openOpportunity){location.hash='opportunities';showView('opportunities');review(b.dataset.openOpportunity);}if(b.dataset.review)review(b.dataset.review,b.dataset.section);if(b.hasAttribute('data-dismiss-detail')){selected=null;showHashView();}if(b.dataset.detailTab){detailTab=b.dataset.detailTab;renderDetail();}if(b.dataset.pursue){const j=jobs.find(j=>j.id===b.dataset.pursue);if(j)update(j.id,{pursue:!j.pursue});}if(b.dataset.close){closing=b.dataset.close;$('close-reason').value='';$('close-dialog').showModal();}});
 document.addEventListener('submit',async e=>{if(e.target.id!=='hunter-form')return;e.preventDefault();const form=e.target,values=Object.fromEntries(new FormData(form));form.querySelector('button').disabled=true;try{const r=await fetch('/.netlify/functions/hunter-contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(values)});const d=await r.json();if(!r.ok)throw new Error(d.error);$('hunter-result').innerHTML=prose(d.found?`${d.email}\nVerification: ${d.status}\nProvenance: ${d.provenance}\nChecked: ${d.checkedAt}\n${d.caution}\n${d.sources.map(s=>s.uri).join('\n')}`:'No address found.');}catch(err){$('hunter-result').textContent=err.message;}finally{form.querySelector('button').disabled=false;}});
 $('close-form').addEventListener('submit',e=>{e.preventDefault();const reason=$('close-reason').value;if(reason){$('close-dialog').close();update(closing,{closeReason:reason});}});$('cancel-close').addEventListener('click',()=>$('close-dialog').close());$('refresh').addEventListener('click',load);$('search').addEventListener('input',renderOpportunities);$('stage-filter').addEventListener('change',renderOpportunities);
 $('opportunity-sort').addEventListener('change',renderOpportunities);
