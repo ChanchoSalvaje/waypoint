@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const M = require('../public/waypoint-model');
 
-test('opportunity filters distinguish undecided, pursued, submitted, and incomplete research', () => {
+test('opportunity filters keep Saved jobs visible when research is queued by the Pursue checkbox', () => {
   const jobs = [
     { id: 'undecided', stage: 'Saved', researchStatus: 'Ready', fit: 5, dateFound: '2026-11-15' },
     { id: 'pursuing', stage: 'Saved', pursue: true, researchStatus: 'Partial', dateFound: '2026-11-17' },
@@ -11,8 +11,8 @@ test('opportunity filters distinguish undecided, pursued, submitted, and incompl
     { id: 'closed', stage: 'Closed', dateFound: '2026-11-17' },
   ];
   const rows = (view, sort = 'newest', query = '') => M.opportunityRows(jobs, { view, sort, query }).map(j => j.id);
-  assert.deepEqual(rows('decide'), ['undecided']);
-  assert.deepEqual(rows('preparing'), ['pursuing', 'review']);
+  assert.deepEqual(rows('decide'), ['pursuing', 'undecided']);
+  assert.deepEqual(rows('preparing'), ['review']);
   assert.deepEqual(rows('applied'), ['applied']);
   assert.deepEqual(rows('research'), ['pursuing', 'review']);
   assert.deepEqual(rows('active'), ['pursuing', 'review', 'undecided', 'applied']);
