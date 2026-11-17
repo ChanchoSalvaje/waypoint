@@ -13,6 +13,7 @@ const leadOutput = {
   employerAt: 'Employer Timestamp',
   employerDateKind: 'Timestamp Kind',
   state: 'State',
+  decision: "Tim's decision",
 };
 
 function latestHold(notes) {
@@ -35,6 +36,7 @@ function mapLead(row) {
   const hold = output.state === 'New' ? latestHold(row.fields[schema.leadFields['Review Notes']]) : null;
   return {
     ...output,
+    leadRecordId: row.id,
     id: output.sourceKey || [output.company, output.role, row.createdTime].join("|"),
     firstSeenAt: output.firstSeenAt || row.createdTime,
     usesCreatedTime: !output.firstSeenAt,
