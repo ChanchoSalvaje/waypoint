@@ -6,13 +6,25 @@ const link=(url,label,cls='')=>{const safe=M.safeUrl(url);return safe?`<a class=
 // Linkify original text, then escape each non-link segment; never reinterpret escaped entities.
 function prose(value){const s=String(value||''),re=/https?:\/\/[^\s<>"']+/g;let out='',last=0;for(const m of s.matchAll(re)){out+=esc(s.slice(last,m.index));const u=m[0].replace(/[),.;]+$/,'');out+=link(u,u)+esc(m[0].slice(u.length));last=m.index+m[0].length;}return '<div class="prose">'+(out+esc(s.slice(last))).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')+'</div>';}
 function notify(message){$('toast').textContent=message;$('toast').hidden=false;setTimeout(()=>$('toast').hidden=true,6500);}
-async function get(path){const r=await fetch(path,{cache:'no-store'});let d;try{d=await r.json();}catch{throw new Error('Could not read the server response.');}if(!r.ok||d.error)throw new Error(d.error||`Request failed (${r.status}).`);return d;}
+async function get(path){const r=await fetch(path,{cache:'no-store'});let d;try{d=await r.json();}catch{throw new Error('Could not read the server response.');}if(!r.ok||d.error){const error=new Error(d.error||`Request failed (${r.status}).`);error.code=d.code;throw error;}return d;}
+async function readFeeds(){
+ const results=[];
+ let blocked=null;
+ // Read one feed at a time. A monthly block affects every feed, so stop rather
+ // than issuing more calls that are guaranteed to fail.
+ for(const path of ['/.netlify/functions/jobs?active=true','/.netlify/functions/operations','/.netlify/functions/signals','/.netlify/functions/new-posts']){
+  if(blocked){results.push({status:'rejected',reason:blocked});continue;}
+  try{results.push({status:'fulfilled',value:await get(path)});}
+  catch(reason){results.push({status:'rejected',reason});if(reason.code==='AIRTABLE_MONTHLY_LIMIT')blocked=reason;}
+ }
+ return results;
+}
 async function load(){
  if ($('refresh').disabled) return;
  $('refresh').disabled=true;$('load-error').hidden=true;$('data-status').textContent='Refreshing…';
- const results=await Promise.allSettled([get('/.netlify/functions/jobs?active=true'),get('/.netlify/functions/operations'),get('/.netlify/functions/signals'),get('/.netlify/functions/new-posts')]);
+ const results=await readFeeds();
  if(results[0].status==='fulfilled'){const d=results[0].value;jobs=d.jobs||[];preview=!!d.preview;$('data-status').textContent=`Pipeline read ${new Date(d.asOf||Date.now()).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/Phoenix'})} Tucson time`;$('notice').hidden=!preview;$('notice').textContent='Review preview: a captured tracker snapshot. Changes are disabled here.';}
- else{$('load-error').hidden=false;$('load-error').textContent=results[0].reason.message+' Previously loaded data, if any, may be stale.';$('data-status').textContent='Pipeline refresh failed';}
+ else{$('load-error').hidden=false;$('load-error').textContent=results[0].reason.message+' Previously loaded data, if any, may be stale.';$('data-status').textContent=results[0].reason.code==='AIRTABLE_MONTHLY_LIMIT'?'Tracker blocked · monthly API allowance exhausted':'Pipeline refresh failed';}
  if(results[1].status==='fulfilled'){ops=results[1].value;opsError='';}else{ops=null;opsError=results[1].reason.message;}
  if(results[2].status==='fulfilled'){signals=results[2].value.signals||[];signalsError='';}else{signals=[];signalsError=results[2].reason.message;}
  if(results[3].status==='fulfilled' && Array.isArray(results[3].value.posts)){

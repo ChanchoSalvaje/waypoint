@@ -83,8 +83,11 @@ exports.handler = async () => {
       }),
     ]);
     return json(200, { posts: combinePosts(leadRows.map(mapLead), opportunityRows.map(mapOpportunity)) });
-  } catch {
-    return json(502, { error: 'Could not read recent posts from the tracker.' });
+  } catch (error) {
+    return json(error.statusCode || 502, {
+      error: error.code ? error.message : 'Could not read recent posts from the tracker.',
+      ...(error.code ? { code: error.code } : {}),
+    });
   }
 };
 
