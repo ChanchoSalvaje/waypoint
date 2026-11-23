@@ -72,9 +72,8 @@ async function run({store,readSnapshot,key,spendBlock,now=()=>new Date()}){
  }
 }
 function configured(){return process.env.WAYPOINT_BACKUPS_ENABLED==='true';}
-async function runtimeStore(signal){
+async function runtimeStore(signal,storeFactory){
  // Modern Netlify Functions provide the complete Blobs context automatically.
- const {getStore}=require('@netlify/blobs');
- return getStore({name:'waypoint-backups',consistency:'strong',fetch:(url,options)=>fetch(url,{...options,signal})});
+ return storeFactory({name:'waypoint-backups',consistency:'strong',fetch:(url,options)=>fetch(url,{...options,signal})});
 }
 module.exports={health,run,configured,runtimeStore};
