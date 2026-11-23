@@ -8,7 +8,7 @@ function validateSnapshot(snapshot) {
  const names=Object.keys(snapshot.data),defined=snapshot.schema.map(t=>t.name);
  if(names.length!==defined.length||new Set(defined).size!==defined.length||names.some(n=>!defined.includes(n)||!Array.isArray(snapshot.data[n])))throw Error('Backup schema and data differ.');
  if(names.some(n=>!/^public\.waypoint_[a-z_]+$|^waypoint_migration\.[a-z_]+$/.test(n)))throw Error('Backup includes an unexpected schema.');
- if(!Number.isFinite(Date.parse(snapshot.capturedAt))||snapshot.databaseBytes>policy.maximumDatabaseBytes)throw Error('Invalid capture time or database cap exceeded.');
+ if(!Number.isFinite(Date.parse(snapshot.capturedAt))||!Number.isFinite(snapshot.databaseBytes)||snapshot.databaseBytes<0||snapshot.databaseBytes>policy.maximumDatabaseBytes)throw Error('Invalid capture time or database cap exceeded.');
  const records=snapshot.data['public.waypoint_records'],tables=snapshot.data['public.waypoint_tables'];
  if(!Array.isArray(records)||!Array.isArray(tables))throw Error('Application data is missing.');
  const ids=new Map(records.map(r=>[r.id,r]));

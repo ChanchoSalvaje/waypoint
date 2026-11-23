@@ -18,3 +18,8 @@ test('wrong keys, corrupted archives, broken links, and missing tables fail back
  let source=snapshot();source.data['public.waypoint_record_links'].push({record_id:source.data['public.waypoint_records'][0].id,target_id:'rec99999999999999'});assert.throws(()=>seal(source,key));
  source=snapshot();source.data['public.waypoint_tables'].pop();assert.throws(()=>seal(source,key));
 });
+test('restore SQL retains JSON null provenance values rather than converting them to SQL NULL',()=>{
+ const {restoreSQL}=require('../scripts/backup/restore.cjs');
+ const data={schema:[{name:'waypoint_migration.cell_values',create:'create table waypoint_migration.cell_values (export_id uuid,row_number integer,field_id text,value jsonb not null);',rls:true,constraints:[],indexes:[],triggers:[],policies:[]}],functions:[],data:{'waypoint_migration.cell_values':[{export_id:'00000000-0000-0000-0000-000000000001',row_number:1,field_id:'fld00000000000001',value:null}]}};
+ const sql=restoreSQL(data);assert.match(sql,/r->'value'/);assert.match(sql,/jsonb_array_elements/);assert.ok(!sql.includes('from jsonb_populate_recordset(null::"waypoint_migration"."cell_values"'));
+});

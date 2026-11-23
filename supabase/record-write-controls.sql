@@ -30,7 +30,7 @@ begin
   for definition in select jsonb_array_elements(field_definitions)
     from public.waypoint_tables where table_key=new.table_key
   loop
-    if definition->>'name' in ('Notes','Change Log','Suggested Update') then
+    if definition->>'name' in ('Notes','Change Log') then
       before_text=coalesce(old.fields->>(definition->>'id'),'');
       after_text=coalesce(new.fields->>(definition->>'id'),'');
       if left(after_text,length(before_text)) <> before_text then

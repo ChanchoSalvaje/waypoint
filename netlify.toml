@@ -28,3 +28,7 @@
 # Direct-employer pilot: hourly at :10 UTC (also :10 in Tucson).
 [functions."collect-employer-jobs"]
   schedule = "10 * * * *"
+
+# Daily encrypted backup at 03:40 Arizona time. No-op until explicitly enabled.
+[functions."backup-waypoint"]
+  schedule = "40 10 * * *"

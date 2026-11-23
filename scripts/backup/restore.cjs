@@ -17,7 +17,13 @@ function restoreSQL(snapshot){
  for(const table of snapshot.schema){
   const rows=snapshot.data[table.name];if(!rows.length)continue;
   const columns=Object.keys(rows[0]).map(ident).join(',');
-  sql.push('insert into '+qualified(table.name)+' ('+columns+') overriding system value select '+columns+' from jsonb_populate_recordset(null::'+qualified(table.name)+','+literal(JSON.stringify(rows))+'::jsonb);');
+  // jsonb_populate_recordset turns a JSON null into SQL NULL. This column
+  // intentionally stores JSON null as a value, so retain the raw JSON token.
+  if(table.name==='waypoint_migration.cell_values'){
+   sql.push('insert into '+qualified(table.name)+" (export_id,row_number,field_id,value) select (r->>'export_id')::uuid,(r->>'row_number')::integer,r->>'field_id',r->'value' from jsonb_array_elements("+literal(JSON.stringify(rows))+"::jsonb) r;");
+  }else{
+   sql.push('insert into '+qualified(table.name)+' ('+columns+') overriding system value select '+columns+' from jsonb_populate_recordset(null::'+qualified(table.name)+','+literal(JSON.stringify(rows))+'::jsonb);');
+  }
  }
  // Foreign keys are installed after primary/unique constraints across all tables.
  for(const foreign of [false,true])for(const table of snapshot.schema)for(const c of table.constraints||[])
