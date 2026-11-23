@@ -55,7 +55,9 @@ function paramsOf(input) {
 function addCondition(query, condition) {
   const logic = condition.match(/^(and|or)\((.*)\)$/s);
   if (logic) query.set(logic[1],'('+logic[2]+')');
-  else { const dot=condition.indexOf('.'); query.set(condition.slice(0,dot),condition.slice(dot+1)); }
+  // Quoted operands belong to PostgREST's logic grammar. In a standalone
+  // column filter the quotes become part of the value and match no records.
+  else query.set('and','('+condition+')');
 }
 async function list(name, input = {}) {
   const table = await tableFor(name), params = paramsOf(input);
