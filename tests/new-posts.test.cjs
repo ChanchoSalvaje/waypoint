@@ -2,6 +2,17 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const M = require('../public/waypoint-model');
 
+test('review queue retains old unresolved leads without presenting them as newly discovered',()=>{
+ const now=new Date('2026-11-23T22:00:00Z');
+ const rows=[{id:'old',kind:'lead',state:'New',firstSeenAt:'2026-09-01T12:00:00Z'},
+ {id:'closed',kind:'lead',state:'New',decision:'Close',firstSeenAt:'2026-11-23T12:00:00Z'},
+ {id:'screened',kind:'lead',state:'Ignored',firstSeenAt:'2026-11-23T12:00:00Z'},
+ {id:'tracked',kind:'opportunity',stage:'Applied',firstSeenAt:'2026-11-23T12:00:00Z'}];
+ assert.deepEqual(M.postRows(rows,0,false,now).map(p=>p.id),['old']);
+ assert.ok(!M.postRows(rows,1,false,now).some(p=>p.id==='old'));
+ assert.equal(M.postRows(rows,0,true,now).length,4);
+});
+
 test('opportunity filters keep Saved jobs visible when research is queued by the Pursue checkbox', () => {
   const jobs = [
     { id: 'undecided', stage: 'Saved', researchStatus: 'Ready', fit: 5, dateFound: '2026-11-15' },
