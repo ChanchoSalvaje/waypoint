@@ -125,15 +125,18 @@ function renderNewPosts(){
  const visible=post=>M.inPostReview(post,activeById.get(post.id)?.stage);
  const today=M.recentPosts(posts,1);
  const reviewCount=today.filter(visible).length;
- summary.textContent=postsError?'Showing the last successful read.':`${quantity(reviewCount,'new post')} to review today · ${today.length} discovered`;
- const period=M.recentPosts(posts,Number($('post-window').value));
+ const pending=M.postRows(posts,0,false).length;
+ let mail='';
+ for(const run of ops?.runs||[]){try{const q=JSON.parse(run.Details).queue_health;if(Number.isInteger(q?.alerts_queued)){mail=` · ${q.alerts_queued} alert emails queued at ${tucsonDate(q.checked_at,true)}`;break;}}catch{}}
+ summary.textContent=postsError?'Showing the last successful read.':`${quantity(reviewCount,'new post')} to review today · ${pending} leads awaiting review across all dates${mail}`;
  const includeHistory=$('post-history').checked;
+ const period=M.postRows(posts,Number($('post-window').value),includeHistory);
  const available=includeHistory?period:period.filter(visible);
  const query=$('post-search').value.trim().toLowerCase();
  const rows=available.filter(post=>!query||[post.company,post.role].join(' ').toLowerCase().includes(query));
  count.textContent=query?`${rows.length} of ${quantity(available.length,'post')}`:quantity(rows.length,'post');
  const warning=postsError?`<p class="error">${esc(postsError)} Showing the last successful read.</p>`:'';
- const empty=query&&available.length?'No posts match this search.':period.length?'No posts to review. Include screened-out and closed roles to see the history.':'No posts were recorded in this date range.';
+ const empty=query&&available.length?'No posts match this search.':period.length?'No posts to review. Include screened-out and closed roles to see the history.':Number($('post-window').value)?'No posts were first seen in this date range. Choose Awaiting review to see older unresolved leads.':'No leads are awaiting review. Queued alert emails are processed separately by the intake sweep.';
  cards.innerHTML=warning+(rows.length?rows.map(post=>postCard(post,activeById)).join(''):`<p class="empty">${empty}</p>`);
 }
 function renderSignals(){$('signal-cards').innerHTML=signalsError?`<p class="error">Signals could not refresh: ${esc(signalsError)}</p>`:signals.filter(s=>!['Dismissed','Closed','Archived'].includes(s.status)).map(s=>`<article class="signal-card"><div class="meta">${esc(s.company||'Company not recorded')} · ${esc(s.date||'Date not recorded')}</div><h3>${esc(s.signal||s.title||'Signal')}</h3><p>${esc(s.summary||'No summary recorded.')}</p>${link(s.sourceUrl,'Original source')}${s.angle?'<h4>Conversation angle</h4>'+prose(s.angle):''}${s.staged?'<details><summary>Outreach draft</summary>'+prose(s.staged)+'</details>':''}</article>`).join('')||'<p class="empty">No active signals recorded.</p>';}

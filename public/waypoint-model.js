@@ -62,5 +62,10 @@
     if ((currentStage || post.stage) === 'Closed' || post.decision === 'Close') return false;
     return post.state !== 'Ignored' || post.decision === 'Pursue';
   }
-  return {inPostReview,stages,date,localDate,days,due,urgent,research,rank,shortlist,safeUrl,freshness,sourceHealth,opportunityMatches,opportunityRows,discoveryDay,windowStart,recentPosts};
+  function postRows(items, length, history, now = new Date()) {
+    if (length) return recentPosts(items,length,now);
+    if (history) return items.slice().sort(newestFirst);
+    return items.filter(p=>p.kind==='lead' && p.state==='New' && p.decision!=='Close').sort(newestFirst);
+  }
+  return {postRows,inPostReview,stages,date,localDate,days,due,urgent,research,rank,shortlist,safeUrl,freshness,sourceHealth,opportunityMatches,opportunityRows,discoveryDay,windowStart,recentPosts};
 });
