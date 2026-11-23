@@ -96,3 +96,13 @@ test('Pursue, Close, and notes retain the endpoint whitelist and preserve previo
  assert.ok(patches.filter(p=>Object.hasOwn(p.p_patch,F.notes)).every(p=>Object.hasOwn(p.p_expected,F.notes)));
  const before=patches.length;assert.equal((await call({fit:5})).statusCode,400);assert.equal((await call({stage:'Invented stage'})).statusCode,400);assert.equal(patches.length,before);
 });
+test('deployment connection check is read-only and never returns settings, URLs, or credentials',async t=>{
+ setup(t);const settings={table_key:'settings',source_table_id:'tbl00000000000001',field_definitions:[]};
+ t.mock.method(global,'fetch',async(input,options)=>{assert.ok(!options.method||options.method==='GET');return json(String(input).includes('/waypoint_tables')?[settings]:[row(1)]);});
+ const {handler}=require('../netlify/functions/datastore-status');
+ const response=await handler({httpMethod:'GET'}),body=JSON.parse(response.body);
+ assert.equal(response.statusCode,200);assert.equal(body.connection,'verified');
+ for(const forbidden of [process.env.WAYPOINT_SUPABASE_SECRET_KEY,process.env.WAYPOINT_SUPABASE_URL,row(1).id])assert.ok(!response.body.includes(forbidden));
+ assert.equal((await handler({httpMethod:'POST'})).statusCode,405);
+ process.env.WAYPOINT_SUPABASE_SECRET_KEY='sb_publishable_synthetic';assert.equal((await handler({httpMethod:'GET'})).statusCode,503);
+});
