@@ -48,6 +48,20 @@ test('complete reads pass the 1000-row default limit and imported creation time 
  });
  const result=await store.list(table.source_table_id);assert.equal(result.length,1101);assert.equal(pages,3);assert.equal(result[0].createdTime,null);
 });
+test('single predicates use PostgREST logic quoting for receipt ownership and record readback',async t=>{
+ setup(t);const current=row(1,{[F.company]:'Synthetic: employer, (quoted)',[F.stage]:'Saved'});let requests=0;
+ t.mock.method(global,'fetch',async(input)=>{
+  const url=new URL(input);if(url.pathname.endsWith('/waypoint_tables'))return json([table]);
+  requests++;assert.equal(url.searchParams.get('and'),requests===1
+   ? '(id.eq.'+JSON.stringify(current.id)+')'
+   : '(fields->>'+F.company+'.eq.'+JSON.stringify(current.fields[F.company])+')');
+  assert.equal(url.searchParams.has('id'),false);assert.equal(url.searchParams.has('fields->>'+F.company),false);
+  return json([current],200,{'Content-Range':'0-0/1'});
+ });
+ assert.equal((await store.list(table.source_table_id,{filterByFormula:`RECORD_ID()='${current.id}'`}))[0].id,current.id);
+ const result=await store.request(table.source_table_id+'?'+new URLSearchParams({filterByFormula:"{Company}='Synthetic: employer, (quoted)'"}));
+ assert.equal(result.records[0].id,current.id);assert.equal(requests,2);
+});
 test('direct endpoint paging reads each page once and preserves field IDs and values',async t=>{
  setup(t);const dataset=Array.from({length:205},(_,i)=>row(i+1,{[F.fit]:4,[F.pursue]:false}));let pages=0;
  t.mock.method(global,'fetch',async(input)=>{const url=new URL(input);if(url.pathname.endsWith('/waypoint_tables'))return json([table]);pages++;const start=Number(url.searchParams.get('offset'));return json(dataset.slice(start,start+Number(url.searchParams.get('limit'))),200,{'Content-Range':`${start}-${Math.min(start+99,204)}/205`});});
