@@ -12,6 +12,8 @@
 // ---------------------------------------------------------------------------
 
 const BASE_ID = "appUQQ4gnT7UuFOOm";
+const { dataFetch: fetch, serverToken } = require('./lib/data-backend');
+const supabase = require('./lib/supabase-store');
 const TABLE_ID = "tbl4RoBe4zpDora2R";
 const RECORD_ID = "recpVte7eqKLrAUGL"; // the single "Active" settings record
 
@@ -77,7 +79,7 @@ async function getRecord(token) {
 }
 
 exports.handler = async function (event) {
-  const token = process.env.AIRTABLE_TOKEN;
+  const token = serverToken();
   if (!token) return json(500, { error: "AIRTABLE_TOKEN is not set on the server." });
 
   try {
@@ -157,7 +159,7 @@ exports.handler = async function (event) {
       const res = await fetch(`${AT}/${RECORD_ID}`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ fields, typecast: true }),
+        body: JSON.stringify({ fields, typecast: true, ...(supabase.enabled() ? {expectedFields:{[F.changeLog]:cur[F.changeLog] ?? null}} : {}) }),
       });
       if (!res.ok) return json(res.status, { error: `Airtable write failed (${res.status}).`, detail: await res.text() });
       // Airtable's PATCH response keys fields by NAME (returnFieldsByFieldId is honored

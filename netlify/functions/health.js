@@ -16,6 +16,7 @@
 // ---------------------------------------------------------------------------
 
 const BASE_ID = "appUQQ4gnT7UuFOOm";
+const { dataFetch: fetch, serverToken } = require('./lib/data-backend');
 const WATCHLIST_ID = "tblzwXPsedzGgLH9D";
 const SIGNALS_ID = "tbl2pSoKACtdKdLNO";
 
@@ -75,7 +76,7 @@ async function fetchAll(token, tbl, fieldIds) {
 }
 
 exports.handler = async function () {
-  const token = process.env.AIRTABLE_TOKEN;
+  const token = serverToken();
   if (!token) return json(500, { error: "AIRTABLE_TOKEN is not set on the server." });
 
   try {

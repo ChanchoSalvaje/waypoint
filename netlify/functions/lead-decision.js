@@ -1,4 +1,5 @@
 const { request, schema, json } = require('./lib/airtable');
+const supabase = require('./lib/supabase-store');
 
 exports.handler = async function (event) {
   if (event.httpMethod !== 'POST') return json(405, { error: 'Use POST.' });
@@ -23,7 +24,8 @@ exports.handler = async function (event) {
       if (existing !== input.previous) return json(409, { error: 'The decision changed. Refresh before choosing again.' });
       const result = await request(path, {
         method: 'PATCH',
-        body: JSON.stringify({ fields: { [field]: input.decision || null }, returnFieldsByFieldId: true })
+        body: JSON.stringify({ fields: { [field]: input.decision || null }, returnFieldsByFieldId: true,
+          ...(supabase.enabled() ? {expectedFields:{[field]:current.fields[field] ?? null,[fields.State]:current.fields[fields.State] ?? null}} : {}) })
       });
       if (result.id !== input.id || (result.fields[field] || '') !== input.decision) {
         return json(502, { error: 'Could not confirm the saved decision. Refresh before trying again.' });

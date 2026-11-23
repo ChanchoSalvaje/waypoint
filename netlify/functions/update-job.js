@@ -36,6 +36,8 @@
 // ---------------------------------------------------------------------------
 
 const BASE_ID = "appUQQ4gnT7UuFOOm";
+const { dataFetch: fetch, serverToken } = require('./lib/data-backend');
+const supabase = require('./lib/supabase-store');
 const TABLE_ID = "tblWZyC4j4z12roVq";
 
 const STAGE_FIELD = "fldE1YGHZdjiPIkiR";       // Stage (singleSelect)
@@ -72,7 +74,7 @@ exports.handler = async function (event) {
     return json(405, { error: "Method not allowed — use POST." });
   }
 
-  const token = process.env.AIRTABLE_TOKEN;
+  const token = serverToken();
   if (!token) {
     return json(500, { error: "AIRTABLE_TOKEN is not set on the server." });
   }
@@ -167,6 +169,7 @@ exports.handler = async function (event) {
   }
 
   try {
+    let expectedFields;
     // APPEND-ONLY: read the current Notes FIRST, then add the dated line below it.
     if (appendEntry !== null) {
       const getUrl =
@@ -180,6 +183,7 @@ exports.handler = async function (event) {
         });
       }
       const cur = await getResp.json();
+      if (supabase.enabled()) expectedFields = { [NOTES_FIELD]: cur.fields?.[NOTES_FIELD] ?? null };
       const existing = (cur.fields && cur.fields[NOTES_FIELD]) || "";
       fields[NOTES_FIELD] = existing ? `${existing}\n${appendEntry}` : appendEntry;
     }
@@ -188,7 +192,7 @@ exports.handler = async function (event) {
     const resp = await fetch(url, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ fields, typecast: true }),
+      body: JSON.stringify({ fields, typecast: true, ...(expectedFields ? {expectedFields} : {}) }),
     });
 
     if (!resp.ok) {

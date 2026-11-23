@@ -16,3 +16,10 @@ Claude outputs/
 .claude/settings.local.json
 
 .preview/
+
+# Migration exports and backups contain private business records.
+.migration-data/
+.backup-data/
+*.dump
+*.sql.age
+*.backup.age
