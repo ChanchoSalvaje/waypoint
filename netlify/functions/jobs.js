@@ -11,6 +11,7 @@
 
 const BASE_ID = "appUQQ4gnT7UuFOOm";
 const TABLE_ID = "tblWZyC4j4z12roVq";
+const { responseError } = require('./lib/airtable-error');
 
 // Exact live field IDs (confirmed against the Airtable schema, not assumed).
 // We read by field ID so a rename in Airtable can't silently break the app.
@@ -122,11 +123,8 @@ exports.handler = async function (event = {}) {
       });
 
       if (!resp.ok) {
-        const detail = await resp.text();
-        return json(resp.status, {
-          error: `Airtable request failed (${resp.status}).`,
-          detail,
-        });
+        const error = await responseError(resp);
+        return json(resp.status, { error: error.message, code: error.code });
       }
 
       const page = await resp.json();

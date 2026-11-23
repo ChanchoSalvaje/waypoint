@@ -1,4 +1,5 @@
 const schema = require('./schema.json');
+const { responseError } = require('./airtable-error');
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function request(table, options = {}, fetcher = fetch) {
   const token = process.env.AIRTABLE_TOKEN;
@@ -7,8 +8,10 @@ async function request(table, options = {}, fetcher = fetch) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const response = await fetcher(url, { ...options, signal: AbortSignal.timeout(15000), headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...options.headers } });
     // Never retry an uncertain create: a lost/5xx response may follow a committed write.
-    if ((response.status === 429 || response.status >= 500) && attempt < 2 && (!options.method || options.method === 'GET')) { await wait(1000 * (attempt + 1)); continue; }
-    if (!response.ok) throw new Error(`Airtable request failed (${response.status}).`);
+    // A 429 can mean the monthly allowance is exhausted. Fast retries cannot fix
+    // that, and a temporary throttle requires at least a 30-second pause.
+    if (response.status >= 500 && attempt < 2 && (!options.method || options.method === 'GET')) { await wait(1000 * (attempt + 1)); continue; }
+    if (!response.ok) throw await responseError(response);
     return response.json();
   }
 }
