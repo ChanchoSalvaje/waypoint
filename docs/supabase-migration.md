@@ -1,6 +1,6 @@
 # Supabase migration: requirements and release gates
 
-Status: preparation only. No database import, backend switch, billing change, or backup schedule has been activated by these files.
+Status: replacement backend and migration/recovery utilities are prepared. Deployment, verified restore, and coordinated writer cutover remain separate release gates. Private execution state belongs in the private operations checkpoint.
 
 ## Operating contract
 
@@ -28,7 +28,7 @@ Use an independent, non-AI freshness check; a failure notification from the back
 
 ## Data and process inventory
 
-Migrate Opportunities, Settings, Contacts, Signals, Watchlist, Source Boards, Lead Inbox, Automation Runs, and record comments. Include all stages and all pages. Preserve exact source IDs and date semantics. Obtain a current schema export so linked fields, multi-selects, formulas and field IDs can be reconciled. Per-table counts and exhausted pagination must be independently verified.
+Migrate Opportunities, Settings, Companies, Contacts, Stories, Signals, Watchlist, Source Boards, Lead Inbox, and Automation Runs. Historical separate record comments remain in the unchanged Airtable archive when explicitly approved by the owner; Notes fields are included in full. New comments have a private Supabase table. Include all stages and all pages. Preserve exact source IDs and date semantics. Obtain a current schema export so linked fields, multi-selects, formulas and field IDs can be reconciled. Per-table counts and exhausted pagination must be independently verified.
 
 Update the website's jobs, updates, settings, signals, health, operations, discovery and lead-decision endpoints; the hourly employer collector; and six research/intake/application helpers with their references. Preserve retired Watchlist polling as retired. Do not run old and new writers together.
 
@@ -47,3 +47,19 @@ The live schedule inventory additionally includes the hourly pipeline worker, da
 9. Keep Airtable unchanged as the source recovery copy. Rollback after new writes requires reconciliation; changing a code flag alone can strand new records and is not a complete rollback.
 
 Do not mark migration complete while any release gate is unresolved. Report prepared code, live infrastructure, imported records, deployed backend, backup activation and restored-data verification as separate states.
+
+## Verified CSV import and known limits
+
+The CSV route preserves every raw header and cell in a private staging schema. Require full per-table raw and normalized checksums. Reconcile all original record IDs, field IDs, and relationship targets against the source UI. Verify each exported timestamp field’s timezone; CSV timestamp precision is minutes. Source creation times absent from CSV must remain unknown. Inventory attachment values and files separately. Keep all actual verification results in the private migration checkpoint.
+
+`validate-export.cjs` remains the stricter API-export validator, including original creation time and imported-comment requirements. Do not label CSV input as passing that API validator. CSV reconciliation has its own path in `scripts/migration/csv_reconciliation.py` and independent checksums. The approved comment archive exception applies only to historical separate Airtable comments.
+
+## Server connection and recovery preparation
+
+Configure `WAYPOINT_SUPABASE_URL` and the secret `WAYPOINT_SUPABASE_SECRET_KEY` only in Waypoint’s server function environment. The backend flag `WAYPOINT_DATA_BACKEND` defaults to `airtable`; set it to `supabase` only at coordinated cutover. A new backend failure must not fall back to Airtable or leak the server key. The public client and existing site-wide authentication are unchanged.
+
+Apply the SQL definitions in this order on an empty destination: `csv-staging-schema.sql`, `csv-reconciliation-schema.sql`, `application-schema.sql`, `record-write-controls.sql`, `unique-work-keys.sql`, and `backup-snapshot.sql`. Data reconciliation is a separate, private step. The snapshot RPC reads all ten physical application/provenance tables in one transaction, and captures actual schema, constraints, functions, triggers, policies, role flags without passwords, and access-control metadata. It is callable only by the server role.
+
+`archive.cjs` compresses and encrypts the complete snapshot with AES-256-GCM and a fresh IV per copy, then verifies table counts, checksums, identities, and links on decryption. A different 256-bit recovery key must be kept outside the archive and outside this public repository. `restore.cjs` emits SQL only into `.backup-data` for an empty isolated Supabase database; it never connects to or overwrites the live database. The restore uses the canonical service-only grants and rejects unexpected row policies for explicit review. An emitted script alone does not prove a restore: execute it in isolation, compare the restored snapshot checksums, and verify anonymous/unrelated-user denials before release.
+
+Before activation, inspect the existing Netlify plan, included credits, auto recharge, and add-ons. No plan change or credit purchase is authorized by this code. Netlify Blobs is a possible private independent destination, but provider-specific quota checks and the backup schedule must be implemented and verified separately. Do not use an invented byte allowance to pass the generic quota preflight.

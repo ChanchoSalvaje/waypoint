@@ -27,7 +27,7 @@ function exportFixture(){
 const now=new Date('2026-11-23T13:00:00Z');
 test('complete exports are checksummed without exposing private record contents',()=>{
  const result=validateExport(exportFixture(),now);assert.equal(result.ok,true);
- assert.equal(Object.keys(result.counts).length,8);
+ assert.equal(Object.keys(result.counts).length,policy.requiredTables.length);
  assert.ok(Object.values(result.checksums).every(value=>/^[a-f0-9]{64}$/.test(value)));
  assert.ok(!JSON.stringify(result).includes('Synthetic preserved value'));
 });

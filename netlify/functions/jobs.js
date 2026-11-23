@@ -10,6 +10,7 @@
 // ---------------------------------------------------------------------------
 
 const BASE_ID = "appUQQ4gnT7UuFOOm";
+const { dataFetch: fetch, serverToken } = require('./lib/data-backend');
 const TABLE_ID = "tblWZyC4j4z12roVq";
 const { responseError } = require('./lib/airtable-error');
 
@@ -92,7 +93,7 @@ function mapRecord(record) {
 }
 
 exports.handler = async function (event = {}) {
-  const token = process.env.AIRTABLE_TOKEN;
+  const token = serverToken();
 
   // Fail loudly (but safely) if the token isn't set. Its one home is the
   // Netlify site's environment variables; `netlify dev` injects it locally

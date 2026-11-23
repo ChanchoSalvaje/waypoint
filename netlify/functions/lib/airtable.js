@@ -1,7 +1,9 @@
 const schema = require('./schema.json');
 const { responseError } = require('./airtable-error');
+const supabase = require('./supabase-store');
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function request(table, options = {}, fetcher = fetch) {
+  if (supabase.enabled()) return supabase.request(table, options);
   const token = process.env.AIRTABLE_TOKEN;
   if (!token) throw new Error('Airtable server access is not configured.');
   const url = `https://api.airtable.com/v0/${schema.base}/${table}`;
@@ -16,9 +18,13 @@ async function request(table, options = {}, fetcher = fetch) {
   }
 }
 async function list(table, params = {}, fetcher = fetch) {
+  if (supabase.enabled()) return supabase.list(table, params);
   let records = [], offset;
   for (let page = 0; page < 100; page++) {
-    const q = new URLSearchParams({ pageSize: '100', returnFieldsByFieldId: 'true', ...params });
+    const q = new URLSearchParams({ pageSize: '100', returnFieldsByFieldId: 'true' });
+    for (const [key,value] of Object.entries(params)) {
+      if (Array.isArray(value)) value.forEach(item=>q.append(key,item)); else q.set(key,value);
+    }
     if (offset) q.set('offset', offset);
     const data = await request(`${table}?${q}`, {}, fetcher);
     if (!Array.isArray(data.records)) throw new Error('Incomplete Airtable response.');
@@ -29,6 +35,7 @@ async function list(table, params = {}, fetcher = fetch) {
   throw new Error('Airtable pagination limit reached; refusing a partial read.');
 }
 async function write(table, records, method = 'POST', fetcher = fetch) {
+  if (supabase.enabled()) return supabase.write(table, records, method);
   const result = [];
   for (let i = 0; i < records.length; i += 10) {
     const data = await request(table, { method, body: JSON.stringify({ records: records.slice(i, i + 10), typecast: false }) }, fetcher);

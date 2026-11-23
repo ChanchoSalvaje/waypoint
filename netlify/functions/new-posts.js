@@ -77,9 +77,11 @@ exports.handler = async () => {
     const calendarDate = `DATETIME_PARSE('${start}T00:00:00Z')`;
     const leadDate = `IF({First Seen At},{First Seen At},CREATED_TIME())`;
     const [leadRows, opportunityRows] = await Promise.all([
-      list(schema.leads, { filterByFormula: `NOT(IS_BEFORE(${leadDate},${midnight}))` }),
+      list(schema.leads, { filterByFormula: `NOT(IS_BEFORE(${leadDate},${midnight}))`,
+        'fields[]':[...Object.values(leadOutput),'Fit Score','Fit Basis','Review Notes'] }),
       list(schema.opportunities, {
         filterByFormula: `IF({First Seen At},NOT(IS_BEFORE({First Seen At},${midnight})),AND({Date Found},NOT(IS_BEFORE({Date Found},${calendarDate}))))`,
+        'fields[]':['Company','Role','Stage','First Seen At','Date Found','Employer Posted At','Link','Apply Link','Job Key','Work Mode','Fit Score','Fit Basis'],
       }),
     ]);
     return json(200, { posts: combinePosts(leadRows.map(mapLead), opportunityRows.map(mapOpportunity)) });

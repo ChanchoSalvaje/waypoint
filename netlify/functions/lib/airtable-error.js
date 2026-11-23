@@ -13,6 +13,12 @@ function airtableError(status, detail = '') {
 async function responseError(response) {
   let detail = '';
   try { detail = await response.text(); } catch { /* Some transports have no readable body. */ }
+  try {
+    const body=JSON.parse(detail);
+    if (['SUPABASE_REQUEST_FAILED','TRACKER_REQUEST_FAILED','TRACKER_NOT_CONFIGURED'].includes(body.code)) {
+      return Object.assign(new Error('Could not confirm the private tracker request. Refresh before retrying a write.'),{statusCode:response.status,code:body.code});
+    }
+  } catch { /* Ordinary Airtable errors retain their existing diagnosis. */ }
   return airtableError(response.status, detail);
 }
 module.exports = { airtableError, responseError };

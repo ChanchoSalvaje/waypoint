@@ -22,6 +22,8 @@
 // ---------------------------------------------------------------------------
 
 const BASE_ID = "appUQQ4gnT7UuFOOm";
+const { dataFetch: fetch, serverToken } = require('./lib/data-backend');
+const supabase = require('./lib/supabase-store');
 const TABLE_ID = "tbl2pSoKACtdKdLNO";
 const WATCHLIST_ID = "tblzwXPsedzGgLH9D";
 
@@ -107,11 +109,11 @@ async function readNotes(token, id) {
   });
   if (!resp.ok) throw new Error(`read ${resp.status}: ${await resp.text()}`);
   const cur = await resp.json();
-  return (cur.fields && cur.fields[F.notes]) || "";
+  return (cur.fields && cur.fields[F.notes]) ?? null;
 }
 
 exports.handler = async function (event) {
-  const token = process.env.AIRTABLE_TOKEN;
+  const token = serverToken();
   if (!token) return json(500, { error: "AIRTABLE_TOKEN is not set on the server." });
 
   try {
@@ -177,7 +179,7 @@ exports.handler = async function (event) {
       const resp = await fetch(`${AT}/${id}`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ fields, typecast: true }),
+        body: JSON.stringify({ fields, typecast: true, ...(supabase.enabled() ? {expectedFields:{[F.notes]:existing}} : {}) }),
       });
       if (!resp.ok) {
         const detail = await resp.text();
